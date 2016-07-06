@@ -19,3 +19,8 @@
         edge.cpp: fix edge label font (cmmi and cmr were reversed).
         canvasview.cpp: change the help text for join (JOIN_DESCRIPTION)
            to clarify usage.
+
+This line is change
+This line is another change
+This line is the last change
+
