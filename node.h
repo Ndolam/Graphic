@@ -25,7 +25,7 @@
  *  (b) Remove edgeWeight, which is used nowhere.
  * May 11, 2020 (IC V1.6)
  *  (a) Changed logicalDotsPerInchX variable to physicalDotsPerInchX
- *  to correct scaling issues. (Only reliable with Qt V5.12.2 or higher)
+ *  to correct scaling issues. (Only reliable with Qt V5.14.2 or higher)
  *  (b) Removed unused physicalDotsPerInchY variable as only one DPI
  *  value is needed for the node's radius.
  */
