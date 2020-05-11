@@ -196,6 +196,9 @@
  *	even without env QT_AUTO_SCREEN_SCALE_FACTOR=1 and things look
  *	fine on macos as well.
  *  (b) Replace a bunch of printf()s with qDebu(); delete a number of others.
+ * May 11, 2020 (IC V1.24)
+ *  (a) Changed the logical DPI variables to use physical DPI to correct
+ * scaling issues. (Only reliable with Qt V5.12.2 or higher)
  */
 
 #include "mainwindow.h"
@@ -245,7 +248,7 @@
 // Similar for vertex precision in .grphc output:
 #define VP_PREC_GRPHC  4
 
-static qreal screenLogicalDPI_X, screenLogicalDPI_Y;
+static qreal screenPhysicalDPI_X, screenPhysicalDPI_Y;
 
 /*
  * Name:	MainWindow
@@ -442,13 +445,13 @@ QMainWindow(parent),
     on_graphType_ComboBox_currentIndexChanged(-1);
 
     QScreen * screen = QGuiApplication::primaryScreen();
-    screenLogicalDPI_X = screen->logicalDotsPerInchX();
-    screenLogicalDPI_Y = screen->logicalDotsPerInchY();
+    screenPhysicalDPI_X = screen->physicalDotsPerInchX();
+    screenPhysicalDPI_Y = screen->physicalDotsPerInchY();
 
 #ifdef DEBUG
     // Info to help with dealing with HiDPI issues
     printf("Logical DPI: (%.3f, %.3f)\nPhysical DPI: (%.3f, %.3f)\n",
-	   screenLogicalDPI_X, screenLogicalDPI_Y,
+       screen->logicalDotsPerInchX(), screen->logicalDotsPerInchY(),
 	   screen->physicalDotsPerInchX(), screen->physicalDotsPerInchY());
     printf("Physical size (mm): ht %.1f, wd %.3f\n",
 	   screen->physicalSize().height(), screen->physicalSize().width());
@@ -973,7 +976,7 @@ saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 	outfile << "    e/.style={draw=" << defEdgeLineColourName;
 
     outfile << ", line width="
-	    << QString::number(edgeDefaults.penSize / screenLogicalDPI_X,
+        << QString::number(edgeDefaults.penSize / screenPhysicalDPI_X,
 			       'f', ET_PREC_TIKZ) << "in},\n";
     outfile << "    l/.style={font=\\fontsize{" << edgeDefaults.labelSize
 	    << "}{1}\\selectfont}]\n";
@@ -1083,11 +1086,11 @@ saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 	// Use (x,y) coordinate system for node positions.
 	outfile << "\\node (v" << QString::number(i) << ") at ("
 		<< QString::number((node->scenePos().rx() - midx)
-				   / screenLogicalDPI_X,
+                   / screenPhysicalDPI_X,
 				   'f', VP_PREC_TIKZ)
 		<< ","
 		<< QString::number((node->scenePos().ry() - midy)
-				   / -screenLogicalDPI_Y,
+                   / -screenPhysicalDPI_Y,
 				   'f', VP_PREC_TIKZ)
 		<< ") [n";
 	outfile << fillColour << lineColour;
@@ -1181,7 +1184,7 @@ saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 		{
 		    outfile << ", line width="
 			    << QString::number(edge->getPenWidth()
-					       / screenLogicalDPI_X,
+                           / screenPhysicalDPI_X,
 					       'f', ET_PREC_TIKZ)
 			    << "in";
 		    wroteExtra = true;
@@ -1293,17 +1296,17 @@ saveGraphIc(QTextStream &outfile, QVector<Node *> nodes, bool outputExtra)
 	    miny = y;
     }
 
-    qreal midxInch = (maxx + minx) / (screenLogicalDPI_X * 2.);
-    qreal midyInch = (maxy + miny) / (screenLogicalDPI_Y * 2.);
+    qreal midxInch = (maxx + minx) / (screenPhysicalDPI_X * 2.);
+    qreal midyInch = (maxy + miny) / (screenPhysicalDPI_Y * 2.);
     for (int i = 0; i < nodes.count(); i++)
     {
 	// TODO: s/,/\\/ before writing out label.  Undo this when reading.
 	Node * node = nodes.at(i);
 	outfile << "# Node " + QString::number(i) + ":\n";
-	outfile << QString::number(node->scenePos().rx() / screenLogicalDPI_X
+    outfile << QString::number(node->scenePos().rx() / screenPhysicalDPI_X
 				   - midxInch,
 				   'f', VP_PREC_GRPHC) << ","
-		<< QString::number(node->scenePos().ry() / screenLogicalDPI_Y
+        << QString::number(node->scenePos().ry() / screenPhysicalDPI_Y
 				   - midyInch,
 				   'f', VP_PREC_GRPHC) << ", "
 		<< QString::number(node->getDiameter()) << ", "
@@ -1790,7 +1793,7 @@ MainWindow::select_Custom_Graph(QString graphName)
 	    qreal y = fields.at(1).toDouble();
 	    qreal d = fields.at(2).toDouble();
 	    qreal r = d / 2.;
-	    node->setPos(x * screenLogicalDPI_X, y * screenLogicalDPI_Y);
+        node->setPos(x * screenPhysicalDPI_X, y * screenPhysicalDPI_Y);
 	    node->setDiameter(d);
 	    node->setRotation(fields.at(3).toDouble());
 	    node->setID(i++);
@@ -1908,8 +1911,8 @@ MainWindow::select_Custom_Graph(QString graphName)
     for (int i = 0; i < nodes.count(); i++)
     {
 	Node * n = nodes.at(i);
-	n->setPreviewCoords(n->x() / width / screenLogicalDPI_X,
-			    n->y() / height / screenLogicalDPI_Y);
+    n->setPreviewCoords(n->x() / width / screenPhysicalDPI_X,
+                n->y() / height / screenPhysicalDPI_Y);
 	qDebu("    nodes[%s] coords: screen (%.4f, %.4f); "
 	      "preview set to (%.4f, %.4f)", n->getLabel().toLatin1().data(),
 	      n->x(), n->y(), n->getPreviewX(), n->getPreviewY());
@@ -1975,12 +1978,12 @@ MainWindow::style_Graph(enum widget_ID what_changed)
 		ui->NodeLabel2->text(),
 		ui->NumLabelCheckBox->isChecked(),
 		ui->NodeLabelSize->value(),
-		ui->NodeFillColor->palette().background().color(),
-		ui->NodeOutlineColor->palette().background().color(),
+        ui->NodeFillColor->palette().window().color(),
+        ui->NodeOutlineColor->palette().window().color(),
 		ui->edgeSize->value(),
 		ui->EdgeLabel->text(),
 		ui->EdgeLabelSize->value(),
-		ui->EdgeLineColor->palette().background().color(),
+        ui->EdgeLineColor->palette().window().color(),
 		ui->graphWidth->value(),
 		ui->graphHeight->value(), 
 		ui->graphRotation->value());
@@ -2513,8 +2516,8 @@ MainWindow::nodeParamsUpdated()
 	ui->NumLabelCheckBox->isChecked(),  // Useful?
 	ui->NodeLabel1->text(),		    // Useful?
 	ui->NodeLabelSize->value(),
-	ui->NodeFillColor->palette().background().color(),
-	ui->NodeOutlineColor->palette().background().color());
+    ui->NodeFillColor->palette().window().color(),
+    ui->NodeOutlineColor->palette().window().color());
 }
 
 
@@ -2541,7 +2544,7 @@ MainWindow::edgeParamsUpdated()
 	ui->edgeSize->value(),
 	ui->EdgeLabel->text(),
 	ui->EdgeLabelSize->value(),
-	ui->EdgeLineColor->palette().background().color());
+    ui->EdgeLineColor->palette().window().color());
 }
 
 

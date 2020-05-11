@@ -55,6 +55,11 @@
  *  (b) Remove edgeWeight, which is used nowhere.
  * Dec 13, 2019 (JD V1.8)
  *  (a) Added defuns.h, removed debug stuff.
+ * May 11, 2020 (IC V1.9)
+ *  (a) Changed logicalDotsPerInchX variable to physicalDotsPerInchX
+ *  to correct scaling issues. (Only reliable with Qt V5.12.2 or higher)
+ *  (b) Removed unused physicalDotsPerInchY variable as only one DPI
+ *  value is needed for the node's radius.
  */
 
 #include "defuns.h"
@@ -62,7 +67,6 @@
 #include "node.h"
 #include "canvasview.h"
 #include "preview.h"
-
 
 #include <QTextDocument>
 #include <QKeyEvent>
@@ -75,8 +79,6 @@
 #include <QMimeData>
 #include <QDrag>
 #include <QtCore>
-
-
 
 /*
  * Name:        Node
@@ -105,11 +107,8 @@ Node::Node()
     setHandlesChildEvents(true);
     select = false;		    // TODO: is 'select' of any use?
     QScreen * screen = QGuiApplication::primaryScreen();
-    logicalDotsPerInchX = screen->logicalDotsPerInchX();
-    logicalDotsPerInchY = screen->logicalDotsPerInchY();
+    physicalDotsPerInchX = screen->physicalDotsPerInchX();
 }
-
-
 
 /*
  * Name:        addEdge
@@ -161,7 +160,7 @@ bool Node::removeEdge(Edge * edge)
 
 /*
  * Name:        setDiameter()
- * Purpose:     Sets the size of the diameter of the node in "logical DPI".
+ * Purpose:     Sets the size of the diameter of the node in "physical DPI".
  *		Notifies its edges that one of their nodes changed.
  * Arguments:   qreal
  * Output:      Nothing.
@@ -177,7 +176,7 @@ bool Node::removeEdge(Edge * edge)
 void
 Node::setDiameter(qreal diameter)
 {
-    nodeDiameter = diameter * logicalDotsPerInchX;
+    nodeDiameter = diameter * physicalDotsPerInchX;
     foreach (Edge * edge, edgeList)
 	edge->adjust();
     update();
@@ -203,7 +202,7 @@ Node::setDiameter(qreal diameter)
 
 qreal Node::getDiameter()
 {
-    return nodeDiameter / logicalDotsPerInchX;
+    return nodeDiameter / physicalDotsPerInchX;
 }
 
 

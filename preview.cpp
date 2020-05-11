@@ -48,6 +48,10 @@
  *	style library graphs.  Part of this involves changing
  *	Style_Graph() so that individual styles can be applied,
  *	rather than the former "apply everything" approach.
+ * May 11, 2020 (IC V1.7)
+ *  (a) Changed the width/height values of the preview window from
+ *  logicalDotsPerInch to physicalDotsPerInch to correct scaling issues
+ *  (Only reliable with Qt V5.12.2 or higher)
  */
 
 #include "basicgraphs.h"
@@ -419,8 +423,8 @@ PreView::Style_Graph(Graph * graph,		    int graphType,
     int i = 0, j = 0;
 
     QScreen * screen = QGuiApplication::primaryScreen();
-    qreal xDPI = screen->logicalDotsPerInchX();
-    qreal yDPI = screen->logicalDotsPerInchY();
+    qreal xDPI = screen->physicalDotsPerInchX();
+    qreal yDPI = screen->physicalDotsPerInchY();
 
     // The w & h args are *total* w & h for the graph, but we need to
     // locate the center of the nodes.  So first calculate the

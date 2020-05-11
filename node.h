@@ -23,6 +23,11 @@
  * Dec 8, 2019 (JD V1.5)
  *  (a) Add preview X and Y coords and setter/getters.
  *  (b) Remove edgeWeight, which is used nowhere.
+ * May 11, 2020 (IC V1.6)
+ *  (a) Changed logicalDotsPerInchX variable to physicalDotsPerInchX
+ *  to correct scaling issues. (Only reliable with Qt V5.12.2 or higher)
+ *  (b) Removed unused physicalDotsPerInchY variable as only one DPI
+ *  value is needed for the node's radius.
  */
 
 
@@ -107,8 +112,7 @@ class Node : public QGraphicsObject
     int		nodeID;		    // The (internal) number of the node.
     int		penStyle;
     bool	select;
-    qreal	logicalDotsPerInchX;
-    qreal	logicalDotsPerInchY;
+    qreal	physicalDotsPerInchX;
     void	labelToHtml();
     qreal	previewX;
     qreal	previewY;
