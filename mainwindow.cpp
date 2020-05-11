@@ -976,7 +976,7 @@ saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 	outfile << "    e/.style={draw=" << defEdgeLineColourName;
 
     outfile << ", line width="
-    	    << QString::number(edgeDefaults.penSize / screenPhysicalDPI_X,
+	    << QString::number(edgeDefaults.penSize / screenPhysicalDPI_X,
 			       'f', ET_PREC_TIKZ) << "in},\n";
     outfile << "    l/.style={font=\\fontsize{" << edgeDefaults.labelSize
 	    << "}{1}\\selectfont}]\n";
@@ -1086,11 +1086,11 @@ saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 	// Use (x,y) coordinate system for node positions.
 	outfile << "\\node (v" << QString::number(i) << ") at ("
 		<< QString::number((node->scenePos().rx() - midx)
-                                   / screenPhysicalDPI_X,
+				   / screenPhysicalDPI_X,
 				   'f', VP_PREC_TIKZ)
 		<< ","
 		<< QString::number((node->scenePos().ry() - midy)
-                                   / -screenPhysicalDPI_Y,
+				   / -screenPhysicalDPI_Y,
 				   'f', VP_PREC_TIKZ)
 		<< ") [n";
 	outfile << fillColour << lineColour;
@@ -1184,7 +1184,7 @@ saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 		{
 		    outfile << ", line width="
 			    << QString::number(edge->getPenWidth()
-                           / screenPhysicalDPI_X,
+			    / screenPhysicalDPI_X,
 					       'f', ET_PREC_TIKZ)
 			    << "in";
 		    wroteExtra = true;
@@ -1303,10 +1303,10 @@ saveGraphIc(QTextStream &outfile, QVector<Node *> nodes, bool outputExtra)
 	// TODO: s/,/\\/ before writing out label.  Undo this when reading.
 	Node * node = nodes.at(i);
 	outfile << "# Node " + QString::number(i) + ":\n";
-        outfile << QString::number(node->scenePos().rx() / screenPhysicalDPI_X
+	outfile << QString::number(node->scenePos().rx() / screenPhysicalDPI_X
 				   - midxInch,
 				   'f', VP_PREC_GRPHC) << ","
-                << QString::number(node->scenePos().ry() / screenPhysicalDPI_Y
+		<< QString::number(node->scenePos().ry() / screenPhysicalDPI_Y
 				   - midyInch,
 				   'f', VP_PREC_GRPHC) << ", "
 		<< QString::number(node->getDiameter()) << ", "
@@ -1793,7 +1793,7 @@ MainWindow::select_Custom_Graph(QString graphName)
 	    qreal y = fields.at(1).toDouble();
 	    qreal d = fields.at(2).toDouble();
 	    qreal r = d / 2.;
-            node->setPos(x * screenPhysicalDPI_X, y * screenPhysicalDPI_Y);
+	    node->setPos(x * screenPhysicalDPI_X, y * screenPhysicalDPI_Y);
 	    node->setDiameter(d);
 	    node->setRotation(fields.at(3).toDouble());
 	    node->setID(i++);
@@ -1911,8 +1911,8 @@ MainWindow::select_Custom_Graph(QString graphName)
     for (int i = 0; i < nodes.count(); i++)
     {
 	Node * n = nodes.at(i);
-        n->setPreviewCoords(n->x() / width / screenPhysicalDPI_X,
-                            n->y() / height / screenPhysicalDPI_Y);
+	n->setPreviewCoords(n->x() / width / screenPhysicalDPI_X,
+			    n->y() / height / screenPhysicalDPI_Y);
 	qDebu("    nodes[%s] coords: screen (%.4f, %.4f); "
 	      "preview set to (%.4f, %.4f)", n->getLabel().toLatin1().data(),
 	      n->x(), n->y(), n->getPreviewX(), n->getPreviewY());
@@ -1978,12 +1978,12 @@ MainWindow::style_Graph(enum widget_ID what_changed)
 		ui->NodeLabel2->text(),
 		ui->NumLabelCheckBox->isChecked(),
 		ui->NodeLabelSize->value(),
-                ui->NodeFillColor->palette().window().color(),
-                ui->NodeOutlineColor->palette().window().color(),
+		ui->NodeFillColor->palette().window().color(),
+		ui->NodeOutlineColor->palette().window().color(),
 		ui->edgeSize->value(),
 		ui->EdgeLabel->text(),
 		ui->EdgeLabelSize->value(),
-       		ui->EdgeLineColor->palette().window().color(),
+		ui->EdgeLineColor->palette().window().color(),
 		ui->graphWidth->value(),
 		ui->graphHeight->value(), 
 		ui->graphRotation->value());
@@ -2516,8 +2516,8 @@ MainWindow::nodeParamsUpdated()
 	ui->NumLabelCheckBox->isChecked(),  // Useful?
 	ui->NodeLabel1->text(),		    // Useful?
 	ui->NodeLabelSize->value(),
-    	ui->NodeFillColor->palette().window().color(),
-    	ui->NodeOutlineColor->palette().window().color());
+	ui->NodeFillColor->palette().window().color(),
+	ui->NodeOutlineColor->palette().window().color());
 }
 
 
@@ -2544,7 +2544,7 @@ MainWindow::edgeParamsUpdated()
 	ui->edgeSize->value(),
 	ui->EdgeLabel->text(),
 	ui->EdgeLabelSize->value(),
-    	ui->EdgeLineColor->palette().window().color());
+	ui->EdgeLineColor->palette().window().color());
 }
 
 
