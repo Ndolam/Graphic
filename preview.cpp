@@ -50,8 +50,8 @@
  *	rather than the former "apply everything" approach.
  * May 11, 2020 (IC V1.7)
  *  (a) Changed the width/height values of the preview window from
- *  logicalDotsPerInch to physicalDotsPerInch to correct scaling issues
- *  (Only reliable with Qt V5.12.2 or higher)
+ *	logicalDotsPerInch to physicalDotsPerInch to correct scaling issues
+ *	(Only reliable with Qt V5.14.2 or higher)
  */
 
 #include "basicgraphs.h"
