@@ -1184,7 +1184,7 @@ saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 		{
 		    outfile << ", line width="
 			    << QString::number(edge->getPenWidth()
-			    / screenPhysicalDPI_X,
+					       / screenPhysicalDPI_X,
 					       'f', ET_PREC_TIKZ)
 			    << "in";
 		    wroteExtra = true;
