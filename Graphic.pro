@@ -37,6 +37,8 @@ HEADERS += \
     canvasview.h \
     colourfillcontroller.h \
     colourlinecontroller.h \
+    cornergrabber.h \
+    defuns.h \
     edge.h \
     graph.h \
     graphmimedata.h \

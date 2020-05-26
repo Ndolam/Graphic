@@ -2,7 +2,7 @@
  * File:    node.cpp
  * Author:  Rachel Bood
  * Date:    2014/11/07
- * Version: 1.8
+ * Version: 1.9
  *
  * Purpose: creates a node for the users graph
  *

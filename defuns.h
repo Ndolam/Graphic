@@ -17,6 +17,8 @@
  *	be applied, rather than just one corresponding to a particular
  *	widget that changed; used when loading a "basic" graph.
  *	"NO_WGT" indicates that no styles should be applied; used when
+ * May 25, 2020 (IC)
+ *  (a) Added numLabelStart_WGT
  */
 
 #ifndef DEFUNS_H
@@ -42,6 +44,7 @@ enum widget_ID {NO_WGT, ALL_WGT, nodeSize_WGT, nodeLabel1_WGT, nodeLabel2_WGT,
 		nodeOutlineColour_WGT, edgeSize_WGT, edgeLabel_WGT,
 		edgeLabelSize_WGT, edgeLineColour_WGT, graphRotation_WGT,
 		completeCheckBox_WGT, graphHeight_WGT, graphWidth_WGT,
-		numOfNodes1_WGT, numOfNodes2_WGT, graphTypeComboBox_WGT};
+		numOfNodes1_WGT, numOfNodes2_WGT, graphTypeComboBox_WGT,
+		numLabelStart_WGT};
 
 #endif

@@ -46,6 +46,24 @@ To compile (and optionally install) Graphic on MacOS:
    which should create "graphic.dmg" in this directory.
 
 
+To compile (and optionally install) Graphic on Windows 10:
+-----------------------------------------------------
+0. Copy down the source files found here.
+1. Download the Qt installer from https://www.qt.io/offline-installers
+   -> you must install the Qt development tools, not just the run-time support.
+   -> If you don't intend on building with MSVC as your environment/compiler,
+   select a version of MinGW to install when prompted by the Qt installer.
+2. Open graphic.pro in Qt Creator, select your environment when prompted,
+   press configure project, and then run Build.
+3. The executable is the program "Graphic" in the folder called
+      "build-Graphic-Desktop_Qt_5_14_2_*"
+   where * stands for the environment you chose. Move Graphic.exe from this
+   folder to the bin of the environment you chose in this directory path
+      Qt/5_14_2/*/bin/
+   where * stands for the environment you chose.
+4. Optionally, create a shortcut to copy to the directory of your choice.
+
+
 
 -----------------------------------------------------
 
