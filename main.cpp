@@ -19,7 +19,6 @@
 #include <QFileSystemModel>
 #include <QTreeView>
 #include <QFontDatabase>
-#include <QCoreApplication>
 
 int
 main(int argc, char * argv[])

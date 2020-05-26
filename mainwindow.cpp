@@ -333,10 +333,10 @@ QMainWindow(parent),
 	    (void(QDoubleSpinBox::*)(double))&QDoubleSpinBox::valueChanged,
 	    this, [this]() { generate_Graph(nodeSize_WGT); });
     connect(ui->NodeLabel1,
-            (void(QLineEdit::*)(const QString &))&QLineEdit::textChanged,
+	    (void(QLineEdit::*)(const QString &))&QLineEdit::textChanged,
 	    this, [this]() { generate_Graph(nodeLabel1_WGT); });
     connect(ui->NodeLabel2,
-            (void(QLineEdit::*)(const QString &))&QLineEdit::textChanged,
+	    (void(QLineEdit::*)(const QString &))&QLineEdit::textChanged,
 	    this, [this]() { generate_Graph(nodeLabel2_WGT); });
     connect(ui->NodeLabelSize,
 	    (void(QDoubleSpinBox::*)(double))&QDoubleSpinBox::valueChanged,
@@ -360,7 +360,7 @@ QMainWindow(parent),
 	    (void(QDoubleSpinBox::*)(double))&QDoubleSpinBox::valueChanged,
 	    this, [this]() { generate_Graph(edgeSize_WGT); });
     connect(ui->EdgeLabel,
-            (void(QLineEdit::*)(const QString &))&QLineEdit::textChanged,
+	    (void(QLineEdit::*)(const QString &))&QLineEdit::textChanged,
 	    this, [this]() { generate_Graph(edgeLabel_WGT); });
     connect(ui->EdgeLabelSize,
 	    (void(QDoubleSpinBox::*)(double))&QDoubleSpinBox::valueChanged,
@@ -372,8 +372,8 @@ QMainWindow(parent),
     // Redraw the preview pane graph (if any) when these GRAPH
     // parameters are modified:
     connect(ui->graphRotation,
-            (void(QDoubleSpinBox::*)(double))&QDoubleSpinBox::valueChanged,
-            this, [this]() { generate_Graph(graphRotation_WGT); });
+	    (void(QDoubleSpinBox::*)(double))&QDoubleSpinBox::valueChanged,
+	    this, [this]() { generate_Graph(graphRotation_WGT); });
     connect(ui->complete_checkBox,
 	    (void(QCheckBox::*)(bool))&QCheckBox::clicked,
 	    this, [this]() { generate_Graph(completeCheckBox_WGT); });
@@ -445,10 +445,6 @@ QMainWindow(parent),
     // Initialize the canvas to enable snapToGrid feature when loaded.
     ui->canvas->snapToGrid(ui->snapToGrid_checkBox->isChecked());
 
-    QScreen * screen = QGuiApplication::primaryScreen();
-    screenPhysicalDPI_X = screen->physicalDotsPerInchX();
-    screenPhysicalDPI_Y = screen->physicalDotsPerInchY();
-
     set_Font_Sizes();
     // Initialize font sizes for ui labels (Linux fix).
     gridLayout = new QGridLayout();
@@ -458,6 +454,10 @@ QMainWindow(parent),
 
     // Initialize Create Graph pane to default values
     on_graphType_ComboBox_currentIndexChanged(-1);
+
+    QScreen * screen = QGuiApplication::primaryScreen();
+    screenPhysicalDPI_X = screen->physicalDotsPerInchX();
+    screenPhysicalDPI_Y = screen->physicalDotsPerInchY();
 
 #ifdef DEBUG
     // Info to help with dealing with HiDPI issues
@@ -967,7 +967,7 @@ saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 	outfile << "    e/.style={draw=" << defEdgeLineColourName;
 
     outfile << ", line width="
-            << QString::number(edgeDefaults.penSize / screenPhysicalDPI_X,
+	    << QString::number(edgeDefaults.penSize / screenPhysicalDPI_X,
 			       'f', ET_PREC_TIKZ) << "in},\n";
     outfile << "    l/.style={font=\\fontsize{" << edgeDefaults.labelSize
 	    << "}{1}\\selectfont}]\n";
