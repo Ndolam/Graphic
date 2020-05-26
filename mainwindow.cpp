@@ -2,7 +2,7 @@
  * File:	mainwindow.cpp
  * Author:	Rachel Bood
  * Date:	January 25, 2015.
- * Version:	1.23
+ * Version:	1.28
  *
  * Purpose:	Implement the main window and functions called from there.
  *
@@ -199,6 +199,17 @@
  * May 11, 2020 (IC V1.24)
  *  (a) Changed the logical DPI variables to use physical DPI to correct
  * 	scaling issues. (Only reliable with Qt V5.14.2 or higher)
+ * May 12, 2020 (IC V1.25)
+ *  (a) Removed certain labels that were unnecessary after redesigning the ui.
+ * May 15, 2020 (IC V1.26)
+ *  (a) Modified set_Font_Sizes() to be more readable and flexible if we decide
+ *	to change font (sizes) at a later date.
+ * May 19, 2020 (IC V1.27)
+ *  (a) Updated set_Font_Sizes() to use embeded font "arimo" as default font.
+ * May 25, 2020 (IC V1.28)
+ *  (a) Removed setKeyStatusLabel() in favour of tooltips for each mode.
+ *  (b) Added widget NumLabelStart which allows the user to start numbering
+ *	nodes at a specified value instead of always 0.
  */
 
 #include "mainwindow.h"
@@ -223,6 +234,7 @@
 #include <QtSvg/QSvgGenerator>
 #include <QErrorMessage>
 #include <QDate>
+#include <QFont>
 
 
 #define GRAPHiCS_FILE_EXTENSION "grphc"
@@ -321,10 +333,10 @@ QMainWindow(parent),
 	    (void(QDoubleSpinBox::*)(double))&QDoubleSpinBox::valueChanged,
 	    this, [this]() { generate_Graph(nodeSize_WGT); });
     connect(ui->NodeLabel1,
-	    (void(QLineEdit::*)(QString))&QLineEdit::textChanged,
+            (void(QLineEdit::*)(const QString &))&QLineEdit::textChanged,
 	    this, [this]() { generate_Graph(nodeLabel1_WGT); });
     connect(ui->NodeLabel2,
-	    (void(QLineEdit::*)(QString))&QLineEdit::textChanged,
+            (void(QLineEdit::*)(const QString &))&QLineEdit::textChanged,
 	    this, [this]() { generate_Graph(nodeLabel2_WGT); });
     connect(ui->NodeLabelSize,
 	    (void(QDoubleSpinBox::*)(double))&QDoubleSpinBox::valueChanged,
@@ -332,6 +344,9 @@ QMainWindow(parent),
     connect(ui->NumLabelCheckBox,
 	    (void(QCheckBox::*)(bool))&QCheckBox::clicked,
 	    this, [this]() { generate_Graph(numLabelCheckBox_WGT); });
+    connect(ui->NumLabelStart,
+	    (void(QSpinBox::*)(int))&QSpinBox::valueChanged,
+	    this, [this]() { generate_Graph(numLabelStart_WGT); });
     connect(ui->NodeFillColor,
 	    (void(QPushButton::*)(bool))&QPushButton::clicked,
 	    this, [this]() { generate_Graph(nodeFillColour_WGT); });
@@ -345,7 +360,7 @@ QMainWindow(parent),
 	    (void(QDoubleSpinBox::*)(double))&QDoubleSpinBox::valueChanged,
 	    this, [this]() { generate_Graph(edgeSize_WGT); });
     connect(ui->EdgeLabel,
-	    (void(QLineEdit::*)(QString))&QLineEdit::textChanged,
+            (void(QLineEdit::*)(const QString &))&QLineEdit::textChanged,
 	    this, [this]() { generate_Graph(edgeLabel_WGT); });
     connect(ui->EdgeLabelSize,
 	    (void(QDoubleSpinBox::*)(double))&QDoubleSpinBox::valueChanged,
@@ -357,8 +372,8 @@ QMainWindow(parent),
     // Redraw the preview pane graph (if any) when these GRAPH
     // parameters are modified:
     connect(ui->graphRotation,
-	    (void(QDoubleSpinBox::*)(double))&QDoubleSpinBox::valueChanged,
-	    this, [this]() { generate_Graph(graphRotation_WGT); });
+            (void(QDoubleSpinBox::*)(double))&QDoubleSpinBox::valueChanged,
+            this, [this]() { generate_Graph(graphRotation_WGT); });
     connect(ui->complete_checkBox,
 	    (void(QCheckBox::*)(bool))&QCheckBox::clicked,
 	    this, [this]() { generate_Graph(completeCheckBox_WGT); });
@@ -410,9 +425,6 @@ QMainWindow(parent),
     connect(ui->snapToGrid_checkBox, SIGNAL(clicked(bool)),
 	    ui->canvas, SLOT(snapToGrid(bool)));
 
-    connect(ui->canvas, SIGNAL(setKeyStatusLabelText(QString)),
-	    ui->keyPressStatus_label, SLOT(setText(QString)));
-
     connect(ui->canvas, SIGNAL(resetDragMode()),
 	    ui->dragMode_radioButton, SLOT(click()));
 
@@ -433,8 +445,11 @@ QMainWindow(parent),
     // Initialize the canvas to enable snapToGrid feature when loaded.
     ui->canvas->snapToGrid(ui->snapToGrid_checkBox->isChecked());
 
-    ui->splitter->setStretchFactor(0, 1); // Show different modes at start up.
-    set_Label_Font_Sizes();
+    QScreen * screen = QGuiApplication::primaryScreen();
+    screenPhysicalDPI_X = screen->physicalDotsPerInchX();
+    screenPhysicalDPI_Y = screen->physicalDotsPerInchY();
+
+    set_Font_Sizes();
     // Initialize font sizes for ui labels (Linux fix).
     gridLayout = new QGridLayout();
 
@@ -443,10 +458,6 @@ QMainWindow(parent),
 
     // Initialize Create Graph pane to default values
     on_graphType_ComboBox_currentIndexChanged(-1);
-
-    QScreen * screen = QGuiApplication::primaryScreen();
-    screenPhysicalDPI_X = screen->physicalDotsPerInchX();
-    screenPhysicalDPI_Y = screen->physicalDotsPerInchY();
 
 #ifdef DEBUG
     // Info to help with dealing with HiDPI issues
@@ -478,26 +489,6 @@ QMainWindow(parent),
 MainWindow::~MainWindow()
 {
     delete ui;
-}
-
-
-
-/*
- * Name:	setKeyStatusLabel()
- * Purpose:	Set the help text to the given string.
- * Arguments:   The new help text (or empty string).
- * Outputs:	Nothing.
- * Modifies:	The help area of the main window.
- * Returns:	Nothing.
- * Assumptions:	?
- * Bugs:	None(?).
- * Notes:	Is this a confusing name?
- */
-
-void
-MainWindow::setKeyStatusLabel(QString text)
-{
-    ui->keyPressStatus_label->setText(text);
 }
 
 
@@ -976,7 +967,7 @@ saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 	outfile << "    e/.style={draw=" << defEdgeLineColourName;
 
     outfile << ", line width="
-	    << QString::number(edgeDefaults.penSize / screenPhysicalDPI_X,
+            << QString::number(edgeDefaults.penSize / screenPhysicalDPI_X,
 			       'f', ET_PREC_TIKZ) << "in},\n";
     outfile << "    l/.style={font=\\fontsize{" << edgeDefaults.labelSize
 	    << "}{1}\\selectfont}]\n";
@@ -1986,7 +1977,8 @@ MainWindow::style_Graph(enum widget_ID what_changed)
 		ui->EdgeLineColor->palette().window().color(),
 		ui->graphWidth->value(),
 		ui->graphHeight->value(), 
-		ui->graphRotation->value());
+		ui->graphRotation->value(),
+		ui->NumLabelStart->value());
 	}
     }
 }
@@ -2207,7 +2199,7 @@ MainWindow::on_NumLabelCheckBox_clicked(bool checked)
 
 
 /*
- * Name:	MainWindow::set_Label_Font_Sizes()
+ * Name:	MainWindow::set_Font_Sizes()
  * Purpose:
  * Arguments:
  * Outputs:
@@ -2219,83 +2211,57 @@ MainWindow::on_NumLabelCheckBox_clicked(bool checked)
  */
 
 void
-MainWindow::set_Label_Font_Sizes()
+MainWindow::set_Font_Sizes()
 {
     QFont font;
-    font = ui->graphLabel->font();
+    font.setFamily("Arimo");
+    font.setPointSize(10);
+    this->setFont(font);
+
     font.setPointSize(TITLE_SIZE);
     ui->graphLabel->setFont(font);
 
-    font = ui->edgeLabel->font();
     font.setPointSize(TITLE_SIZE - 1);
     ui->edgeLabel->setFont(font);
-
-    font = ui->nodeLabel->font();
-    font.setPointSize(TITLE_SIZE - 1);
     ui->nodeLabel->setFont(font);
 
-    font = ui->sizeLabel->font();
-    font.setPointSize(SUB_TITLE_SIZE);
-    ui->sizeLabel->setFont(font);
-
-    font = ui->partitionLabel->font();
     font.setPointSize(SUB_TITLE_SIZE);
     ui->partitionLabel->setFont(font);
-
-    font = ui->labelLabel->font();
-    font.setPointSize(SUB_TITLE_SIZE);
-    ui->labelLabel->setFont(font);
-
-    font = ui->sizeLabelEN->font();
-    font.setPointSize(SUB_TITLE_SIZE);
-    ui->sizeLabelEN->setFont(font);
-
-    font = ui->colorLabel->font();
-    font.setPointSize(SUB_TITLE_SIZE);
     ui->colorLabel->setFont(font);
-
-    font = ui->rotationLabel->font();
-    font.setPointSize(SUB_TITLE_SIZE);
     ui->rotationLabel->setFont(font);
 
-    font = ui->widthLabel->font();
     font.setPointSize(SUB_SUB_TITLE_SIZE);
     ui->widthLabel->setFont(font);
-
-    font = ui->heightLabel->font();
-    font.setPointSize(SUB_SUB_TITLE_SIZE);
     ui->heightLabel->setFont(font);
-
-    font = ui->textInputLabel->font();
-    font.setPointSize(SUB_SUB_TITLE_SIZE);
     ui->textInputLabel->setFont(font);
-
-    font = ui->textSizeLabel->font();
-    font.setPointSize(SUB_SUB_TITLE_SIZE);
+    ui->textInputLabel_2->setFont(font);
     ui->textSizeLabel->setFont(font);
-
-    font = ui->fillLabel->font();
-    font.setPointSize(SUB_SUB_TITLE_SIZE);
+    ui->textSizeLabel_2->setFont(font);
     ui->fillLabel->setFont(font);
-
-    font = ui->outlineLabel->font();
-    font.setPointSize(SUB_SUB_TITLE_SIZE);
     ui->outlineLabel->setFont(font);
-
-    font = ui->ptLabel->font();
-    font.setPointSize(SUB_SUB_TITLE_SIZE);
     ui->ptLabel->setFont(font);
-
-    font = ui->inchesLabel->font();
-    font.setPointSize(SUB_SUB_TITLE_SIZE);
     ui->inchesLabel->setFont(font);
+    ui->numLabel->setFont(font);
 
-    font = ui->complete_checkBox->font();
     font.setPointSize(SUB_SUB_TITLE_SIZE - 1);
+    ui->graphType_ComboBox->setFont(font);
     ui->complete_checkBox->setFont(font);
+    ui->NumLabelCheckBox->setFont(font);
+    ui->EdgeLabel->setFont(font);
+    ui->NodeLabel1->setFont(font);
+    ui->NodeLabel2->setFont(font);
+
+    font.setPointSize(SUB_SUB_TITLE_SIZE - 2);
+    ui->graphHeight->setFont(font);
+    ui->graphWidth->setFont(font);
+    ui->numOfNodes1->setFont(font);
+    ui->numOfNodes2->setFont(font);
+    ui->graphRotation->setFont(font);
+    ui->EdgeLabelSize->setFont(font);
+    ui->edgeSize->setFont(font);
+    ui->NodeLabelSize->setFont(font);
+    ui->nodeSize->setFont(font);
 }
-
-
 
 /*
  * Name:	on_graphType_ComboBox_currentIndexChanged()

@@ -2,7 +2,7 @@
  * File:    preview.h
  * Author:  Rachel Bood 100088769
  * Date:    2014/11/07 (?)
- * Version: 1.2
+ * Version: 1.3
  *
  * Purpose: define the fields of the preview class.
  *
@@ -21,6 +21,9 @@
  *      and bool modified; and QImage image; as well as undefined
  *	function bool isComplete(); also unnecessary (it seems)
  *	class Node; and class Edge; statements.
+ * May 25, 2020 (IC V1.3)
+ *  (a) Added numStart param to Style_Graph() to allow numbering of nodes
+ *	to start at a specified value instead of only 0.
  */
 
 #ifndef PREVIEW_H
@@ -53,7 +56,7 @@ class PreView: public QGraphicsView
 		       qreal edgeSize,		    QString edgeLabel,
 		       qreal edgeLabelSize,	    QColor edgeLineColor,
 		       qreal totalWidth,	    qreal totalHeight,
-		       qreal rotation);
+		       qreal rotation,		    qreal numStart);
 
   protected:
     virtual void keyPressEvent(QKeyEvent * event);

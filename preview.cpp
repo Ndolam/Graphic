@@ -2,7 +2,7 @@
  * File:    preview.cpp
  * Author:  Rachel Bood 100088769
  * Date:    2014/11/07
- * Version: 1.6
+ * Version: 1.8
  *
  * Purpose: Initializes a QGraphicsView that is used to house the QGraphicsScene
  *
@@ -52,6 +52,9 @@
  *  (a) Changed the width/height values of the preview window from
  *	logicalDotsPerInch to physicalDotsPerInch to correct scaling issues
  *	(Only reliable with Qt V5.14.2 or higher)
+ * May 25, 2020 (IC V1.8)
+ *  (a) Added numStart param to Style_Graph() to allow numbering of nodes
+ *	to start at a specified value instead of only 0.
  */
 
 #include "basicgraphs.h"
@@ -416,11 +419,11 @@ PreView::Style_Graph(Graph * graph,		    int graphType,
 		     qreal edgeSize,		    QString edgeLabel,
 		     qreal edgeLabelSize,	    QColor edgeLineColor,
 		     qreal totalWidth,		    qreal totalHeight,
-		     qreal rotation)
+		     qreal rotation,		    qreal numStart)
 {
     qDeb() << "PV::Style_Graph(wid:" << what_changed << ") called.";
 
-    int i = 0, j = 0;
+    int i = numStart, j = numStart;
 
     QScreen * screen = QGuiApplication::primaryScreen();
     qreal xDPI = screen->physicalDotsPerInchX();
@@ -463,7 +466,8 @@ PreView::Style_Graph(Graph * graph,		    int graphType,
 	    if (what_changed == ALL_WGT
 		|| what_changed == nodeLabel1_WGT
 		|| what_changed == nodeLabel2_WGT
-		|| what_changed == numLabelCheckBox_WGT)
+		|| what_changed == numLabelCheckBox_WGT
+		|| what_changed == numLabelStart_WGT)
 	    {
 		// Clear the node label, in case it was set previously.
 		node->setNodeLabel("");
