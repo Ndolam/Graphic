@@ -210,6 +210,8 @@
  *  (a) Removed setKeyStatusLabel() in favour of tooltips for each mode.
  *  (b) Added widget NumLabelStart which allows the user to start numbering
  *	nodes at a specified value instead of always 0.
+ * May 28, 2020 (IC V1.29)
+ *  (a) Modified save_Graph() to use a white background for JPEG files.
  */
 
 #include "mainwindow.h"
@@ -1496,8 +1498,10 @@ MainWindow::save_Graph()
 
 	QPixmap * image = new QPixmap(ui->canvas->scene()
 				      ->itemsBoundingRect().size().toSize());
-
-	image->fill(Qt::transparent);
+	if (selectedFilter == "JPG (*.jpg)")
+	    image->fill(Qt::white); // JPG backgrounds can't be transparent
+	else
+	    image->fill(Qt::transparent);
 	QPainter painter(image);
 	painter.setRenderHints(QPainter::Antialiasing
 			       | QPainter::TextAntialiasing

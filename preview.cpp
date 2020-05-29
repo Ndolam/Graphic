@@ -376,7 +376,8 @@ PreView::Create_Basic_Graph(int graphType, int numOfNodes1, int numOfNodes2,
         break;
 
       default:
-	// This should never happen!  Do not change to qDeb().
+        // This should never happen!  Do not change to qDeb().
+        // (IC: Sure it can; Everytime you select "Select Graph Type"
 	qDebug() << "PV::Create_Graph(): unknown/invalid graph index "
 		 << graphType;
         break;

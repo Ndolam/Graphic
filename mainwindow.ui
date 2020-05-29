@@ -60,12 +60,6 @@
           <height>0</height>
          </size>
         </property>
-        <property name="maximumSize">
-         <size>
-          <width>750</width>
-          <height>16777215</height>
-         </size>
-        </property>
         <property name="currentIndex">
          <number>0</number>
         </property>
@@ -1828,6 +1822,7 @@
                   <property name="font">
                    <font>
                     <pointsize>10</pointsize>
+                    <strikeout>false</strikeout>
                    </font>
                   </property>
                   <property name="focusPolicy">
@@ -1914,6 +1909,7 @@
                   <property name="font">
                    <font>
                     <pointsize>12</pointsize>
+                    <strikeout>false</strikeout>
                    </font>
                   </property>
                   <property name="text">
@@ -1991,7 +1987,7 @@
            <enum>QLayout::SetDefaultConstraint</enum>
           </property>
           <item>
-           <widget class="QLabel" name="label">
+           <widget class="QLabel" name="modeLabel">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
               <horstretch>0</horstretch>
