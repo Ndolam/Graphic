@@ -2,7 +2,7 @@
  * File:    colourlinecontroller.cpp
  * Author:  Rachel Bood 100088769
  * Date:    2014 (?)
- * Version: 1.2
+ * Version: 1.3
  *
  * Purpose:
  *
@@ -11,6 +11,10 @@
  *  (a) BUTTON_STYLE moved to defuns.h.
  * Oct 18, 2020 (JD V1.2)
  *  (a) Code tidying, spelling corrections, code simplifications.
+ * Nov 6, 2020 (JD V1.3)
+ *  (a) Fix bug in setNodeOutlineColour() and setEdgeLineColour()
+ *	which would clobber the old colour when getColor() was called
+ *	and then cancelled, replacing the old colour with black.
  */
 
 #include "colourlinecontroller.h"
@@ -68,9 +72,12 @@ ColourLineController::setEdgeLineColour()
     if (edge != 0 || edge != nullptr)
     {
 	QColor colour = QColorDialog::getColor();
-	QString s("background: " + colour.name() + "; " + BUTTON_STYLE);
-	button->setStyleSheet(s);
-        edge->setColour(colour);
+	if (colour.isValid())
+	{
+	    QString s("background: " + colour.name() + "; " + BUTTON_STYLE);
+	    button->setStyleSheet(s);
+	    edge->setColour(colour);
+	}
     }
 }
 
@@ -83,9 +90,12 @@ ColourLineController::setNodeOutlineColour()
     if (node != 0 || node != nullptr)
     {
 	QColor colour = QColorDialog::getColor();
-	QString s("background: " + colour.name() + "; " + BUTTON_STYLE);
-	button->setStyleSheet(s);
-        node->setLineColour(colour);
+	if (colour.isValid())
+	{
+	    QString s("background: " + colour.name() + "; " + BUTTON_STYLE);
+	    button->setStyleSheet(s);
+	    node->setLineColour(colour);
+	}
     }
 }
 
