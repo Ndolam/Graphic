@@ -2,7 +2,7 @@
  * File:	file-io.cpp
  * Author:	Jim Diamond
  * Date:	2020-10-22
- * Version:	1.0
+ * Version:	1.1
  *
  * Purpose:	Implement the functions which read .grphc files and
  *		the functions which write files	graph files (text or
@@ -30,6 +30,9 @@
  *	(And, of course, expect this format when reading in .grphc files.)
  *  (f) Improve the pop-up error messages to users with invalid .grphc
  *	files.
+ * Oct 29, 2020 (JD V1.1)
+ *  (a) Do not clear the promptSave (i.e., the graph has not been
+ *	saved) flag for output file types other than .grphc.
  */
 
 #include <QDate>
@@ -780,9 +783,9 @@ File_IO::saveGraph(bool * promptSave, QWidget * parent, Ui::MainWindow * ui)
 			    ui->canvas->scene()->itemsBoundingRect(),
 			    Qt::IgnoreAspectRatio);
 	image->save(fileName); // Requires file extension or it won't save :-/
+
 	ui->canvas->snapToGrid(saveS2GStatus);
 	ui->canvas->update();
-	*promptSave = false;
 	return true;
     }
 
@@ -833,7 +836,6 @@ File_IO::saveGraph(bool * promptSave, QWidget * parent, Ui::MainWindow * ui)
 	outputFile.close();
 	ui->canvas->snapToGrid(saveS2GStatus);
 	ui->canvas->update();
-	*promptSave = false;
 	return success;
     }
 
@@ -843,7 +845,6 @@ File_IO::saveGraph(bool * promptSave, QWidget * parent, Ui::MainWindow * ui)
 	outputFile.close();
 	ui->canvas->snapToGrid(saveS2GStatus);
 	ui->canvas->update();
-	*promptSave = false;
 	return success;
     }
 
@@ -864,7 +865,6 @@ File_IO::saveGraph(bool * promptSave, QWidget * parent, Ui::MainWindow * ui)
 				    Qt::IgnoreAspectRatio);
 	ui->canvas->snapToGrid(saveS2GStatus);
 	ui->canvas->update();
-	*promptSave = false;
 	return true;
     }
 
