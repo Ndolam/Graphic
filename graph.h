@@ -2,7 +2,7 @@
  * File:	graph.h
  * Author:	Rachel Bood
  * Date:	2014 or 2015?
- * Version:	1.3
+ * Version:	1.4
  *
  * Purpose:	Define the graph class.
  *
@@ -17,8 +17,11 @@
  * Aug 14, 2020 (IC V1.2)
  *  (a) Add "keepRotation" param to setRotation().
  *  (b) Add a private "rotation" variable and its "getRotation()" getter.
- * Oct 18, 20202 (JD V1.3)
+ * Oct 18, 2020 (JD V1.3)
  *  (a) Remove the apparently-unused cornergrabber.h.
+ * Nov 7, 2020 (JD V1.4)
+ *  (a) Rename the second param of setRotation() to make its purpose
+ *	clearer (at least to me).
  */
 
 #ifndef GRAPH_H
@@ -53,7 +56,7 @@ public:
     Nodes nodes;
 
     QRectF boundingRect() const;
-    void setRotation(qreal aRotation, bool keepRotation);
+    void setRotation(qreal aRotation, bool rotationIsRelative);
     qreal getRotation();
     QGraphicsItem * getRootParent();
 

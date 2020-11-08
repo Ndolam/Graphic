@@ -2,7 +2,7 @@
  * File:    graph.cpp
  * Author:  Rachel Bood
  * Date:    2014/11/07 (?)
- * Version: 1.6
+ * Version: 1.7
  *
  * Purpose:
  *
@@ -29,6 +29,18 @@
  *	wasn't using the additive rotation value but instead the passed value.
  * Sep 11, 2020 (IC V1.6)
  *  (a) Add code to draw outlines around a graph (purely for debugging).
+ * Nov 7, 2020 (JD V1.7)
+ *  (a) Rename the second param of setRotation() to make its purpose
+ *	clearer (at least to me).
+ *  (b) Change setRotation() so that the rotation of edges and nodes
+ *	is the negative of the graph's rotation, so that the labels
+ *	are shown in the correct orientation.  This works after IC's
+ *	changes to how a join operation works (i.e, when two graphs
+ *	are joined, all the edges and nodes are children of the one
+ *	and only resulting graph).  With this change (and the current
+ *	join code) the labels are finally all correctly oriented, even
+ *	in the cases where there are a sequence of four-node joins and
+ *	rotations done in the Edit Canvas Graph tab.
  */
 
 #include "graph.h"
@@ -182,7 +194,8 @@ Graph::boundingRect() const
 /*
  * Name:	setRotation()
  * Purpose:	Sets the Rotation of the graph.
- * Arguments:	qreal
+ * Arguments:	An amount to rotate, and a flag indicating whether the
+ *		rotation amount is relative or absolute.
  * Output:	Nothing.
  * Modifies:	The graph object itself, as well as nodes and edges of
  *		the graph.
@@ -190,53 +203,71 @@ Graph::boundingRect() const
  * Assumptions: None.
  * Bugs:	None known.
  * Notes:	The node and edge labels need to be rotated in the
- *		opposite direction, otherwise the labels of the edges
- *		and nodes won't be easily read.
+ *		opposite direction of the graph rotation in order to
+ *		keep them oriented horizontally, right side up.
  */
 
 void
-Graph::setRotation(qreal aRotation, bool keepRotation)
+Graph::setRotation(qreal aRotation, bool rotationIsRelative)
 {
     QList<QGraphicsItem *> list;
+
+    qDeb() << "G::setRotation(" << aRotation << "," << rotationIsRelative
+	   << ") called";
 
     foreach (QGraphicsItem * gItem, this->childItems())
 	list.append(gItem);
 
+    if (rotationIsRelative)
+    {
+	qDeb() <<"   changing 'rotation' from " << rotation
+	       << " to " << getRotation() + aRotation;
+	rotation = getRotation() + aRotation;
+    }
+    else
+    {	
+	qDeb() << "   changing 'rotation' from " << rotation
+	       << " to " << aRotation;
+	rotation = aRotation;
+    }
+
     while (!list.isEmpty())
     {
+	qDeb() << "   ! list.isEmpty()";
 	foreach (QGraphicsItem * child, list)
 	{
+	    qDeb() << "      found a child of type" << child->type();
 	    if (child != nullptr || child != 0)
 	    {
 		if (child->type() == Graph::Type)
 		{
+		    // Can this happen after IC's changes to the join operation?
+		    qDeb() << "         found a GRAPH child (add to list)";
 		    list.append(child->childItems());
 		}
 		else if (child->type() == Node::Type)
 		{
 		    Node * node = qgraphicsitem_cast<Node*>(child);
-		    if (keepRotation)
-			node->setRotation(node->getRotation() + -aRotation);
-		    else
-			node->setRotation(-aRotation);
+		    qDeb() << "       changing NODE "
+			     << node->getLabel() << "'s rotation from "
+			     << node->getRotation() << " to "
+			     << -rotation;
+		    node->setRotation(-rotation);
 		}
-		else if(child->type() == Edge::Type)
+		else if (child->type() == Edge::Type)
 		{
 		    Edge * edge = qgraphicsitem_cast<Edge*>(child);
-		    if (keepRotation)
-			edge->setRotation(edge->getRotation() + -aRotation);
-		    else
-			edge->setRotation(-aRotation);
+		    qDeb() << "       changing EDGE "
+			     << edge->getLabel() << "'s rotation from "
+			     << edge->getRotation() << " to "
+			     << -rotation;
+		    edge->setRotation(-rotation);
 		}
+
 		list.removeOne(child);
 	    }
 	}
     }
-
-    if (keepRotation)
-	rotation = getRotation() + aRotation;
-    else
-	rotation = aRotation;
 
     QGraphicsItem::setRotation(rotation);
 }
