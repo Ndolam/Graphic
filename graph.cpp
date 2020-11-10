@@ -2,7 +2,7 @@
  * File:    graph.cpp
  * Author:  Rachel Bood
  * Date:    2014/11/07 (?)
- * Version: 1.7
+ * Version: 1.8
  *
  * Purpose:
  *
@@ -41,9 +41,15 @@
  *	join code) the labels are finally all correctly oriented, even
  *	in the cases where there are a sequence of four-node joins and
  *	rotations done in the Edit Canvas Graph tab.
+ * Nov 9, 2020 (JD V1.8)
+ *  (a) Add the boundingBox() function to return a tight bounding box
+ *      for a graph, and, optionally the center of this box.
+ *	The Qt boundingRect() function returns a larger box which is
+ *	not suitable for all purposes.
  */
 
 #include "graph.h"
+#include "defuns.h"
 #include "canvasview.h"
 #include "node.h"
 #include "edge.h"
@@ -85,6 +91,85 @@ Graph::Graph()
     setAcceptHoverEvents(true);
     setZValue(0);
 }
+
+
+
+/*
+ * Name:	boundingBox()
+ * Purpose:	Return information about the graph, as computed from
+ *		the nodes' screen coords, and possible the node diameters.
+ *		Also calculate and return the center of the graph,
+ *		using only the node screen coords.
+ * Arguments:	A "copy out" QPointF for the center (or nullptr if
+ *		this information is not desired), and a Boolean
+ *		which indicates whether the individual node diameters
+ *		should be taken into account.
+ * Outputs:	Nothing.
+ * Modifies:	The pointer parameter.
+ * Returns:	The QRectF as described above.
+ * Assumptions:	The graph is non-empty.  If it is empty, (0, 0, 0, 0)
+ *		and (0, 0) are returned.
+ * Bugs:	None known.
+ * Notes:	This ignores labels; thus if there is a "very large"
+ *		edge or node label the label may be outside the
+ *		returned QRectF.
+ */
+
+QRectF
+Graph::boundingBox(QPointF * center, bool useNodeSizes)
+{
+    qreal minx = 0, maxx = 0, miny = 0, maxy = 0;
+    bool firstNode = true;
+    qreal r, x, y;
+
+    foreach (QGraphicsItem * item, this->childItems())
+    {
+	switch (item->type())
+	{
+	  case Node::Type:
+	    x = item->scenePos().rx();
+	    y = item->scenePos().ry();
+	    if (firstNode)
+	    {
+		firstNode = false;
+		minx = maxx = x;
+		miny = maxy = y;
+	    }
+	    r = 0;
+
+	    // If we wish to take the node diameter into account we
+	    // must convert from inches to screen coords.
+	    if (useNodeSizes)
+		r = (qgraphicsitem_cast<Node *>(item))->getDiameter() / 2
+		    * currentPhysicalDPI;
+
+	    if (x + r > maxx)
+		maxx = x + r;
+	    else if (x - r < minx)
+		minx = x - r;
+	    if (y + r > maxy)
+		maxy = y + r;
+	    else if (y - r < miny)
+		miny = y - r;
+	    break;
+
+	  case Graph::Type:
+	    // This should not happen since V1.16 of canvasscene.cpp
+	    qDebug() << "UNEXPECTED GRAPH FOUND INSIDE GRAPH!!!!";
+	    break;
+	}
+    }
+
+    if (center != nullptr)
+    {
+	center->setX((maxx + minx) / 2.);
+	center->setY((maxy + miny) / 2.);
+    }
+    QRectF rect (minx, miny, maxx - minx, maxy - miny);
+    // qDeb() << "G::bB: center is " << *center << " and BB rect is " << rect;
+    return rect;
+}
+
 
 
 
@@ -212,7 +297,7 @@ Graph::setRotation(qreal aRotation, bool rotationIsRelative)
 {
     QList<QGraphicsItem *> list;
 
-    qDeb() << "G::setRotation(" << aRotation << "," << rotationIsRelative
+    qDeb() << "G::setRotation(" << aRotation << ", " << rotationIsRelative
 	   << ") called";
 
     foreach (QGraphicsItem * gItem, this->childItems())
@@ -236,7 +321,7 @@ Graph::setRotation(qreal aRotation, bool rotationIsRelative)
 	qDeb() << "   ! list.isEmpty()";
 	foreach (QGraphicsItem * child, list)
 	{
-	    qDeb() << "      found a child of type" << child->type();
+	    qDeb() << "      found a child of type " << child->type();
 	    if (child != nullptr || child != 0)
 	    {
 		if (child->type() == Graph::Type)
