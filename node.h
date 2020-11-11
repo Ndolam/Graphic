@@ -2,7 +2,7 @@
  * File:    node.cpp
  * Author:  Rachel Bood
  * Date:    2014/11/07
- * Version: 1.13
+ * Version: 1.14
  *
  * Purpose: Declare the node class.
  * 
@@ -45,9 +45,14 @@
  * Aug 19, 2020 (IC V1.12)
  *  (a) Make the setNodeLabel(QString) a slot.
  *      Remove the now-unneeded setNodeLabel(void) function.
- * August 26, 2020 (IC V1.13)
+ * Aug 26, 2020 (IC V1.13)
  *  (a) Added tempPenStyle for saving and restoring penstyle during edit tab
  *      focus events.
+ * Nov 11, 2020 (JD V1.14)
+ *  (a) Removed select and rotation attributes.
+ *  (b) Renamed tempPenStyle to savedPenStyle.
+ *  (c) Removed mousePressEvent() and mouseReleaseEvent(), which are
+ *	not needed.
  */
 
 
@@ -56,9 +61,9 @@
 #define NODE_H
 
 #include "html-label.h"
+
 #include <QGraphicsItem>
 #include <QList>
-#include <QGraphicsSceneMouseEvent>
 #include <QTextDocument>
 
 class Edge;
@@ -128,8 +133,6 @@ class Node : public QGraphicsObject
 
   protected:
     QVariant itemChange(GraphicsItemChange change, const QVariant &value);
-    void mousePressEvent(QGraphicsSceneMouseEvent * event);  
-    void mouseReleaseEvent(QGraphicsSceneMouseEvent * event);
     void paint(QPainter * painter, const QStyleOptionGraphicsItem * option,
 	       QWidget * widget);
     bool eventFilter(QObject * obj, QEvent * event);
@@ -139,13 +142,12 @@ class Node : public QGraphicsObject
 
   private:
     QPointF	newPos;
-    qreal	nodeDiameter, rotation;
+    qreal	nodeDiameter;
     QString	label;
     QColor	nodeLine, nodeFill;
     int		nodeID;		    // The (internal) number of the node.
-    int		penStyle, tempPenStyle;
+    int		penStyle, savedPenStyle;
     qreal	penSize;
-    bool	select;
     void	labelToHtml();
     qreal	previewX;
     qreal	previewY;

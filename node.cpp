@@ -2,7 +2,7 @@
  * File:    node.cpp
  * Author:  Rachel Bood
  * Date:    2014/11/07
- * Version: 1.19
+ * Version: 1.20
  *
  * Purpose: creates a node for the users graph
  *
@@ -88,6 +88,19 @@
  *      a focusIn event and restore the penstyle during the focusOut event.
  * Oct 18, 2020 (JD V1.19)
  *  (a) Fix spelling; tweak comments.
+ * Nov 11, 2020 (JD V1.20)
+ *  (a) Removed rotation attribute, since a node is a qgraphicsitem
+ *	which has a rotation (don't store the same info twice!).
+ *	This alleviates some (former) confusion about what the
+ *	rotation of a node is, which contributed to bugs related to
+ *	the four-node join code in canvasscene.cpp.
+ *  (b) Renamed tempPenStyle to savedPenStyle.
+ *  (c) Removed mousePressEvent() and mouseReleaseEvent(), which are
+ *	not needed.  All they did were set and clear "select", which
+ *	is never accessed.  Removed select at the same time.
+ *  (d) Cleaned up comments.
+ *  (e) Removed the long-commented-out setNodeLabel(QString, qreal, QString)
+ *      and nodeDeleted() functions.  (The latter had no code anyway.)
  */
 
 #include "defuns.h"
@@ -114,9 +127,9 @@
  * Name:        Node
  * Purpose:     Constructor for Node class.
  * Arguments:   None.
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    Private node variables.
- * Returns:     none
+ * Returns:     Nothing.
  * Assumptions: None.
  * Bugs:        None known.
  * Notes:       None.
@@ -133,10 +146,8 @@ Node::Node()
     penStyle = 0;	// What type of pen style to use when drawing outline.
     penSize = 1;        // Size of node outline
     nodeDiameter = 1;
-    rotation = 0;
     htmlLabel = new HTML_Label(this);
     setHandlesChildEvents(true);
-    select = false;		    // TODO: is 'select' of any use?
     physicalDotsPerInchX = currentPhysicalDPI_X;
     checked = 0;
 
@@ -150,7 +161,7 @@ Node::Node()
  * Name:        addEdge
  * Purpose:     Adds an Edge to the pointer QList of edges.
  * Arguments:   An Edge pointer.
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    The node's edgeList.
  * Returns:     Nothing.
  * Assumptions: edgeList is valid.
@@ -170,12 +181,12 @@ Node::addEdge(Edge * edge)
  * Name:        removeEdge()
  * Purpose:     Remove an edge from the edgelist.
  * Arguments:   Edge *
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    edgeList
  * Returns:     True if edge was removed, otherwise false.
  * Assumptions: edgeList is valid.
- * Bugs:        none
- * Notes:       none
+ * Bugs:        None.
+ * Notes:       None.
  */
 
 bool
@@ -200,11 +211,11 @@ Node::removeEdge(Edge * edge)
  * Purpose:     Sets the size of the diameter of the node in "physical DPI".
  *		Notifies its edges that one of their nodes changed.
  * Arguments:   qreal
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    nodeDiameter
  * Returns:     Nothing.
- * Assumptions: none
- * Bugs:        none
+ * Assumptions: None.
+ * Bugs:        None.
  * Notes:       The argument diameter is the diameter in inches, therefore
  *              the value must be converted back to pixels in order for the
  *              node to be drawn correctly.
@@ -225,11 +236,11 @@ Node::setDiameter(qreal diameter)
  * Name:        getDiameter()
  * Purpose:     Returns diameter of the node (in inches)
  * Arguments:   None.
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    Nothing.
  * Returns:     The node diameter, in inches.
- * Assumptions: none
- * Bugs:        none
+ * Assumptions: None.
+ * Bugs:        None.
  * Notes:       nodeDiamter is stored in pixels, it needs to be converted back
  *              to inches before it is returned.
  *              FUTURE WORK: create multiple getDiameter() functions to return
@@ -237,7 +248,8 @@ Node::setDiameter(qreal diameter)
  *              the diameter in the desired unit of measurement.
  */
 
-qreal Node::getDiameter()
+qreal
+Node::getDiameter()
 {
     return nodeDiameter / physicalDotsPerInchX;
 }
@@ -247,40 +259,41 @@ qreal Node::getDiameter()
 /*
  * Name:        setRotation()
  * Purpose:     Sets the rotation of the node.
- * Arguments:   qreal
- * Output:      none
- * Modifies:    rotation
- * Returns:     none
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
+ * Arguments:	the new rotation amount.
+ * Outputs:     Nothing.
+ * Modifies:    The node's rotation.
+ * Returns:     Nothing.
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:	The node and edge labels need to be rotated in the
+ *		opposite direction of the graph rotation in order to
+ *		keep them oriented horizontally, right side up.
  */
 
 void
-Node::setRotation(qreal aRotation)
+Node::setRotation(qreal rotationAmount)
 {
-   rotation = aRotation;
-   QGraphicsItem::setRotation(aRotation);
+   QGraphicsItem::setRotation(rotationAmount);
 }
 
 
 
 /*
  * Name:        getRotation()
- * Purpose:     returns the rotation of the node
- * Arguments:   none
- * Output:      qreal
- * Modifies:    none
- * Returns:     rotation
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
+ * Purpose:     Getter for the node's rotation.
+ * Arguments:   None.
+ * Outputs:     Nothing.
+ * Modifies:    Nothing.
+ * Returns:     The node's rotation.
+ * Assumptions: None.
+ * Bugs:	Hard to imagine.
+ * Notes:	None.
  */
 
 qreal
 Node::getRotation()
 {
-    return rotation;
+    return QGraphicsItem::rotation();
 }
 
 
@@ -289,18 +302,18 @@ Node::getRotation()
  * Name:        setFillColour()
  * Purpose:     Sets the fill colour of the node.
  * Arguments:   A QColor.
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    nodeFill
  * Returns:     Nothing.
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:       None.
  */
 
 void
-Node::setFillColour(QColor fColour)
+Node::setFillColour(QColor fillColour)
 {
-    nodeFill = fColour;
+    nodeFill = fillColour;
     update();
 }
 
@@ -310,12 +323,12 @@ Node::setFillColour(QColor fColour)
  * Name:        getFillColour()
  * Purpose:     Returns the fill colour of the node.
  * Arguments:   None.
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    Nothing.
  * Returns:     nodeFill.
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:       None.
  */
 
 QColor
@@ -330,18 +343,18 @@ Node::getFillColour()
  * Name:        setLineColour()
  * Purpose:     Sets the outline colour of the node.
  * Arguments:   A QColor.
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    nodeLine
  * Returns:     Nothing.
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:       None.
  */
 
 void
-Node::setLineColour(QColor lColour)
+Node::setLineColour(QColor lineColour)
 {
-    nodeLine = lColour;
+    nodeLine = lineColour;
     update();
 }
 
@@ -349,14 +362,14 @@ Node::setLineColour(QColor lColour)
 
 /*
  * Name:        getLineColour()
- * Purpose:     Returns the outline colour of the node.
+ * Purpose:     Getter for the outline colour of the node.
  * Arguments:   None.
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    Nothing.
- * Returns:     nodeline
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
+ * Returns:     The node line colour.
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:       None.
  */
 
 QColor
@@ -371,12 +384,14 @@ Node::getLineColour()
  * Name:        findRootParent()
  * Purpose:     Finds the root parent of this node.
  * Arguments:   None.
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    Nothing.
  * Returns:     QGraphicsItem * root.
  * Assumptions: None.
- * Bugs:        none
- * Notes:       none
+ * Bugs:        None.
+ * Notes:       Having removed the idea of graphs containing graphs
+ *		(canvasscene.cpp V1.16), this is probably more complex
+ *		than necessary.
  */
 
 QGraphicsItem *
@@ -394,13 +409,13 @@ Node::findRootParent()
 /*
  * Name:        setID()
  * Purpose:     Sets the ID (i.e., the internal node number) of the node.
- * Arguments:   int
- * Output:      Nothing.
+ * Arguments:   An int, the ID.
+ * Outputs:     Nothing.
  * Modifies:    The nodeID of this node.
  * Returns:     Nothing.
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:       None.
  */
 
 void
@@ -415,12 +430,12 @@ Node::setID(int id)
  * Name:        getID()
  * Purpose:     Returns the ID of this node.
  * Arguments:   None.
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    Nothing.
  * Returns:     The int nodeID
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:       None.
  */
 
 int
@@ -433,14 +448,14 @@ Node::getID()
 
 /*
  * Name:        edges()
- * Purpose:     Returns the list of edges incident to this node.
+ * Purpose:     Returns the list of edges incident with this node.
  * Arguments:   None.
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    Nothing.
  * Returns:     QList<Edge *> edgeList
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:       None.
  */
 
 QList<Edge *>
@@ -455,7 +470,7 @@ Node::edges() const
  * Name:        setNodeLabel(int)
  * Purpose:     Sets the label of the node to an integer.
  * Arguments:   An int, the node label.
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    The text in the node label (both "htmlLabel" and "label" fields).
  * Returns:     Nothing.
  * Assumptions: None.
@@ -477,12 +492,12 @@ Node::setNodeLabel(int number)
  * Purpose:     Sets the label of the node in the case where the label
  *		has a numeric subscript.
  * Arguments:   QString, int
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    The text in the node label (both "htmlLabel" and "label" fields).
  * Returns:     Nothing.
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:       None.
  */
 
 void
@@ -498,12 +513,12 @@ Node::setNodeLabel(QString aLabel, int number)
  * Purpose:     Sets the label of the node in the case where the label
  *		has a string subscript.
  * Arguments:   QString, QString
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    The text in the node label (both "text" and "label" fields).
  * Returns:     Nothing.
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:       None.
  */
 
 void
@@ -519,15 +534,12 @@ Node::setNodeLabel(QString aLabel, QString subscript)
  * Name:        setNodeLabel(QString)
  * Purpose:     Sets the label of the node.
  * Arguments:   QString
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    The text in the node label (both "text" and "label" fields).
  * Returns:     Nothing.
- * Assumptions: none
- * Bugs:        none
- * Notes:       This is (apparently) called from the labelcontroller.cpp
- *		callback, which doesn't distinguish between integer and
- *		string.  So do a test to choose the correct font.
- *		TODO: eh??
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:       None.
  */
 
 void
@@ -547,7 +559,7 @@ Node::setNodeLabel(QString aLabel)
  * Outputs:	Nothing.
  * Modifies:	This node's text field.
  * Returns:	Nothing.
- * Assumptions:
+ * Assumptions:	?
  * Bugs:	Should return a success indication.
  * Notes:	TeX outputs digits in math formula in cmr, and so if I
  *		want this to look extremely TeX-like I actually need to
@@ -573,43 +585,14 @@ Node::labelToHtml()
 
 
 /*
- * Name:        setNodeLabel()
- * Purpose:     Sets the label of the node.
- * Arguments:   QString, qreal, QString
- * Output:      none
- * Modifies:    the htmlLabel in the node's label
- * Returns:     none
- * Assumptions: none
- * Bugs:        none
- * Notes:       IS THIS CALLED FROM ANYWHERE?   NO?
- *		IS IT UP-TO-DATE?
- */
-
-// Defunct?
-//void Node::setNodeLabel(QString htmltext, qreal labelSize, QString aLabel)
-//{
-//    qDebug() << "setNodeLabel(QString, qreal, QString) called!";
-//
-//    label = aLabel;
-//    htmlLabel->setHtml(htmltext);
-//    QFont font = htmlLabel->font();
-//    font.setPointSize(labelSize);
-//    htmlLabel->setFont(font);
-//    lSize = labelSize;
-//    update();
-//}
-
-
-
-/*
  * Name:        setNodeLabelSize()
  * Purpose:     Sets the font size of the node's label.
  * Arguments:   qreal
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    The node's text and fontsize.
  * Returns:     Nothing.
- * Assumptions: none
- * Bugs:        none
+ * Assumptions: None.
+ * Bugs:        None.
  * Notes:       Should this be renamed to be "setNodeFontSize()" ?
  */
 
@@ -627,12 +610,12 @@ Node::setNodeLabelSize(qreal labelSize)
  * Name:        getLabel()
  * Purpose:     Returns the label string for this node.
  * Arguments:   None.
- * Output:      QString
+ * Outputs:     Nothing.
  * Modifies:    Nothing.
  * Returns:     The string contained in the label.
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:       None.
  */
 
 QString
@@ -647,12 +630,12 @@ Node::getLabel() const
  * Name:        getLableSize()
  * Purpose:     Returns the font size of the label.
  * Arguments:   None.
- * Output:      Nothing/
+ * Outputs:     Nothing.
  * Modifies:    Nothing.
  * Returns:     The font size as a qreal.
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:       None.
  */
 
 qreal
@@ -667,12 +650,12 @@ Node::getLabelSize() const
  * Name:        boundingRect()
  * Purpose:     Determines the bounding rectangle of the node.
  * Arguments:   None.
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    Nothing.
  * Returns:     QRectF
- * Assumptions: none
- * Bugs:        none
- * Notes:       TODO: Q: Is adjust some empirical fudge factor?
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:       TODO: Q: Is adjust some empirical fudge factor???
  */
 
 QRectF
@@ -691,12 +674,12 @@ Node::boundingRect() const
 /*
  * Name:        chosen()
  * Purpose:     An int used to determine how to draw the outline of the node.
- * Arguments:   integer
- * Output:      Nothing.
+ * Arguments:   The pen style.
+ * Outputs:     Nothing.
  * Modifies:    penStyle: the integer used in the Node::paint() function.
  * Returns:     Nothing.
- * Assumptions: none
- * Bugs:        none
+ * Assumptions: None.
+ * Bugs:        None.
  * Notes:       none.
  */
 
@@ -712,13 +695,13 @@ Node::chosen(int pen_style)
 /*
  * Name:        editLabel()
  * Purpose:     Change edit flags to specify if the label is editable.
- * Arguments:   boolean
- * Output:      Nothing.
+ * Arguments:	A boolean specifying whether the label is editable.
+ * Outputs:     Nothing.
  * Modifies:    ItemIsFocusable, ItemIsSelectable, setHandlesChildEvents flags
  * Returns:     Nothing.
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:       Is the setHandlesChildEvents flag actually modified??
  */
 
 void
@@ -734,13 +717,13 @@ Node::editLabel(bool edit)
 /*
  * Name:        ~Node()
  * Purpose:     destructor function
- * Arguments:   none
- * Output:      none
- * Modifies:    none
- * Returns:     none
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
+ * Arguments:   None.
+ * Outputs:     Nothing.
+ * Modifies:    ?
+ * Returns:     None.
+ * Assumptions: None.
+ * Bugs:        None.
+ * Notes:       TODO: Why is this here but commented out?
  */
 //Node::~Node()
 //{
@@ -757,31 +740,10 @@ Node::editLabel(bool edit)
 
 
 /*
- * Name:        nodeDeleted()
- * Purpose:     Originally: send a signal to controllers that the node
- *		is deleted.  Now, obviously none.
- * Arguments:   none
- * Output:      none
- * Modifies:    nothing
- * Returns:     none
- * Assumptions: none
- * Bugs:        none
- * Notes:       none
- */
-
-/*void
-Node::nodeDeleted()
-{
-
-}*/
-
-
-
-/*
  * Name:        setPenWidth()
  * Purpose:     Sets the width (penSize) of the node.
  * Arguments:   The new width.
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    The node's penSize.
  * Returns:     Nothing.
  * Assumptions: ?
@@ -804,7 +766,7 @@ Node::setPenWidth(qreal aPenWidth)
  * Name:        getPenWidth()
  * Purpose:     Returns the width (penSize) of the node.
  * Arguments:   None.
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    Nothing.
  * Returns:     A qreal, the penSize.
  * Assumptions: None.
@@ -826,11 +788,11 @@ Node::getPenWidth()
  * Name:        paint()
  * Purpose:     Paints a node.
  * Arguments:   QPainter *, QStyleOptionGraphicsItem *, QWidget *
- * Output:      A node drawing
- * Modifies:    The node drawing.
+ * Outputs:     A node drawing.
+ * Modifies:    The scene.
  * Returns:     Nothing.
- * Assumptions: none
- * Bugs:        none
+ * Assumptions: None.
+ * Bugs:        None.
  * Notes:       Currently only draws nodes as circles.
  */
 
@@ -875,7 +837,7 @@ Node::paint(QPainter * painter, const QStyleOptionGraphicsItem * option,
  * Purpose:     Send a signal to the node's edges to re-adjust their
  *		geometries when a node is moved or rotated.
  * Arguments:   GraphicsItemChange, QVariant value
- * Output:      Nothing.
+ * Outputs:     Nothing.
  * Modifies:    The node's edges' geometries and selection boxes (indirectly).
  * Returns:     A QVariant
  * Assumptions: ?
@@ -928,57 +890,16 @@ Node::itemChange(GraphicsItemChange change, const QVariant &value)
 
 
 /*
- * Name:        mousePressEvent()
- * Purpose:
- * Arguments:	The event.
- * Output:
- * Modifies:
- * Returns:
- * Assumptions:
- */
-
-void
-Node::mousePressEvent(QGraphicsSceneMouseEvent * event)
-{
-    qDeb() << "N::mousePressEvent() setting 'select' to t";
-    select = true;
-    QGraphicsItem::mousePressEvent(event);
-}
-
-
-
-/*
- * Name:       mouseReleaseEvent()
- * Purpose:
- * Arguments:
- * Output:
- * Modifies:
- * Returns:
- * Assumptions:
- */
-
-void
-Node::mouseReleaseEvent(QGraphicsSceneMouseEvent * event)
-{
-    qDeb() << "N::mouseReleaseEvent() setting 'select' to F";
-
-    select = false;
-    QGraphicsItem::mouseReleaseEvent(event);
-}
-
-
-
-/*
  * Name:        eventFilter()
  * Purpose:     Intercepts events related to edit tab widgets so
  *              we can identify the node being edited.
- * Arguments:
- * Output:
+ * Arguments:	The object and the event.
+ * Outputs:	Nothing.
  * Modifies:    The penstyle of the node outline.
- * Returns:
+ * Returns:	The result of QObject::eventFilter(obj, event).
  * Assumptions: The focusIn events pertain to edit tab widgets, not the
  *              node itself.
- * Bugs:
+ * Bugs:	?
  * Notes:       Try using QEvent::HoverEnter and QEvent::HoverLeave?
  */
 
@@ -987,11 +908,11 @@ Node::eventFilter(QObject * obj, QEvent * event)
 {
     if (event->type() == QEvent::FocusIn)
     {
-        tempPenStyle = penStyle;
+        savedPenStyle = penStyle;
         chosen(2);
     }
     else if (event->type() == QEvent::FocusOut)
-        chosen(tempPenStyle);
+        chosen(savedPenStyle);
 
     return QObject::eventFilter(obj, event);
 }

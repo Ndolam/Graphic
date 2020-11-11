@@ -2,7 +2,7 @@
  * File:    graph.cpp
  * Author:  Rachel Bood
  * Date:    2014/11/07 (?)
- * Version: 1.8
+ * Version: 1.9
  *
  * Purpose:
  *
@@ -46,6 +46,10 @@
  *      for a graph, and, optionally the center of this box.
  *	The Qt boundingRect() function returns a larger box which is
  *	not suitable for all purposes.
+ * Nov 11, 2020 (JD V1.9)
+ *  (a) Removed rotation as a graph attribute, since a graph is a
+ *	qgraphicsitem, which has a rotation (don't store the same info
+ *	in two places).  Modified code accordingly.
  */
 
 #include "graph.h"
@@ -72,7 +76,7 @@
  * Name:	Graph()
  * Purpose:	Constructor for the graph object.
  * Arguments:	None.
- * Output:	Nothing.
+ * Outputs:	Nothing.
  * Modifies:	Private variables of the graph object.
  * Returns:	Nothing.
  * Assumptions: None.
@@ -87,7 +91,6 @@ Graph::Graph()
     setFlag(ItemIsFocusable);
     setCacheMode(DeviceCoordinateCache);
     moved = 0;
-    rotation = 0;
     setAcceptHoverEvents(true);
     setZValue(0);
 }
@@ -178,7 +181,7 @@ Graph::boundingBox(QPointF * center, bool useNodeSizes)
  * Purpose:	Set a flag used to determined if the graph was dropped
  *		onto the canvas scene.
  * Arguments:	None.
- * Output:	Nothing.
+ * Outputs:	Nothing.
  * Modifies:	int moved
  * Returns:	Nothing.
  * Assumptions: None.
@@ -200,7 +203,7 @@ Graph::isMoved()
  * Purpose:	Handle the event that is triggered after the user releases
  *		the mouse button.
  * Arguments:	QGraphicsSceneMouseEvent *
- * Output:	Nothing.
+ * Outputs:	Nothing.
  * Modifies:	the Cursor icon
  * Returns:	Nothing.
  * Assumptions: None.
@@ -221,7 +224,7 @@ Graph::mouseReleaseEvent(QGraphicsSceneMouseEvent * event)
  * Name:	paint()
  * Purpose:	None, really (required for custom QGraphicsItems).
  * Arguments:	QPainter *, QStyleOptionGraphicsItem *, QWidget *
- * Output:	Nothing.
+ * Outputs:	Nothing.
  * Modifies:	Nothing.
  * Returns:	Nothing.
  * Assumptions: None.
@@ -259,7 +262,7 @@ Graph::paint(QPainter * painter, const QStyleOptionGraphicsItem * option,
  * Name:	boundingRect()
  * Purpose:	Returns the bouding rectangle of the graph.
  * Arguments:	None.
- * Output:	Nothing.
+ * Outputs:	Nothing.
  * Modifies:	Nothing.
  * Returns:	The graph's boundingRect().
  * Assumptions: None.
@@ -281,7 +284,7 @@ Graph::boundingRect() const
  * Purpose:	Sets the Rotation of the graph.
  * Arguments:	An amount to rotate, and a flag indicating whether the
  *		rotation amount is relative or absolute.
- * Output:	Nothing.
+ * Outputs:	Nothing.
  * Modifies:	The graph object itself, as well as nodes and edges of
  *		the graph.
  * Returns:	Nothing.
@@ -293,28 +296,24 @@ Graph::boundingRect() const
  */
 
 void
-Graph::setRotation(qreal aRotation, bool rotationIsRelative)
+Graph::setRotation(qreal rotationAmount, bool rotationIsRelative)
 {
     QList<QGraphicsItem *> list;
+    qreal newRotation;
 
-    qDeb() << "G::setRotation(" << aRotation << ", " << rotationIsRelative
-	   << ") called";
+    qDeb() << "G::setRotation(" << rotationAmount << ", "
+	   << rotationIsRelative << ") called";
 
     foreach (QGraphicsItem * gItem, this->childItems())
 	list.append(gItem);
 
     if (rotationIsRelative)
-    {
-	qDeb() <<"   changing 'rotation' from " << rotation
-	       << " to " << getRotation() + aRotation;
-	rotation = getRotation() + aRotation;
-    }
+	newRotation = getRotation() + rotationAmount;
     else
-    {	
-	qDeb() << "   changing 'rotation' from " << rotation
-	       << " to " << aRotation;
-	rotation = aRotation;
-    }
+	newRotation = rotationAmount;
+
+    qDeb() << "   changing 'rotation' from " << this->rotation()
+	   << " to " << newRotation;
 
     while (!list.isEmpty())
     {
@@ -333,20 +332,18 @@ Graph::setRotation(qreal aRotation, bool rotationIsRelative)
 		else if (child->type() == Node::Type)
 		{
 		    Node * node = qgraphicsitem_cast<Node*>(child);
-		    qDeb() << "       changing NODE "
-			     << node->getLabel() << "'s rotation from "
-			     << node->getRotation() << " to "
-			     << -rotation;
-		    node->setRotation(-rotation);
+		    qDeb() << "       changing NODE " << node->getLabel()
+			   << "'s rotation from " << node->getRotation()
+			   << " to " << -newRotation;
+		    node->setRotation(-newRotation);
 		}
 		else if (child->type() == Edge::Type)
 		{
 		    Edge * edge = qgraphicsitem_cast<Edge*>(child);
-		    qDeb() << "       changing EDGE "
-			     << edge->getLabel() << "'s rotation from "
-			     << edge->getRotation() << " to "
-			     << -rotation;
-		    edge->setRotation(-rotation);
+		    qDeb() << "       changing EDGE " << edge->getLabel()
+			   << "'s rotation from " << edge->getRotation()
+			   << " to " << -newRotation;
+		    edge->setRotation(-newRotation);
 		}
 
 		list.removeOne(child);
@@ -354,7 +351,7 @@ Graph::setRotation(qreal aRotation, bool rotationIsRelative)
 	}
     }
 
-    QGraphicsItem::setRotation(rotation);
+    QGraphicsItem::setRotation(newRotation);
 }
 
 
@@ -363,7 +360,7 @@ Graph::setRotation(qreal aRotation, bool rotationIsRelative)
  * Name:	getRotation()
  * Purpose:	Getter for the graph's rotation.
  * Arguments:	None.
- * Output:	Nothing.
+ * Outputs:	Nothing.
  * Modifies:	Nothing.
  * Returns:	The graph rotation.
  * Assumptions: None.
@@ -374,7 +371,7 @@ Graph::setRotation(qreal aRotation, bool rotationIsRelative)
 qreal
 Graph::getRotation()
 {
-    return rotation;
+    return this->rotation();
 }
 
 
@@ -383,7 +380,7 @@ Graph::getRotation()
  * Name:	getRootParent()
  * Purpose:	Returns the root parent of the graph.
  * Arguments:	None.
- * Output:	Nothing.
+ * Outputs:	Nothing.
  * Modifies:	Nothing.
  * Returns:	QGraphicsItem *
  * Assumptions: None.

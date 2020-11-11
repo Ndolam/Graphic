@@ -2,7 +2,7 @@
  * File:	graph.h
  * Author:	Rachel Bood
  * Date:	2014 or 2015?
- * Version:	1.5
+ * Version:	1.6
  *
  * Purpose:	Define the graph class.
  *
@@ -25,6 +25,8 @@
  * Nov 9, 2020 (JD V1.5)
  *  (a) Add the boundingBox() function to return a tight bounding box
  *      for a graph, and, optionally the center of this box.
+ * Nov 11, 2020 (JD V1.6)
+ *  (a) Removed rotation as a graph attribute.
  */
 
 #ifndef GRAPH_H
@@ -59,7 +61,7 @@ public:
     Nodes nodes;
 
     QRectF boundingRect() const;
-    void setRotation(qreal aRotation, bool rotationIsRelative);
+    void setRotation(qreal rotationAmount, bool rotationIsRelative);
     qreal getRotation();
     QGraphicsItem * getRootParent();
     QRectF boundingBox(QPointF * center, bool useNodeSizes);
@@ -72,7 +74,6 @@ protected:
 
 private:
      int moved;		// 1 means the graph was dropped onto the canvas.
-     qreal rotation;
 };
 
 #endif // GRAPH_H

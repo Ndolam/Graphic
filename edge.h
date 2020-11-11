@@ -2,7 +2,7 @@
  * File:    edge.h
  * Author:  Rachel Bood
  * Date:    2014/11/07 (?)
- * Version: 1.13
+ * Version: 1.14
  *
  * Purpose: creates an edge for the users graph
  * Modification history:
@@ -53,6 +53,8 @@
  *  (a) Add chosen(), which sets the pen style.
  * Oct 18, 2020 (JD V1.13)
  *  (a) Fix spelling.
+ * Nov 11, 2020 (JD V1.14)
+ *  (a) Removed rotation attribute.
  */
 
 #ifndef EDGE_H
@@ -87,7 +89,7 @@ public:
     void setPenWidth(qreal aPenWidth);
     qreal getPenWidth();
 
-    void setRotation(qreal aRotation);
+    void setRotation(qreal rotationAmount);
     qreal getRotation();
 
     void setColour(QColor colour);
@@ -138,7 +140,7 @@ private:
     Node	* source, * dest;   // Original names based on directed graphs
     QPointF	sourcePoint, destPoint;
     QPolygonF	selectionPolygon;
-    qreal	destRadius, sourceRadius, rotation;
+    qreal	destRadius, sourceRadius;
     QLineF	edgeLine;
     QString	label;
     int		penStyle;

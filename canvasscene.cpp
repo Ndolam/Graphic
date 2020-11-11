@@ -2,7 +2,7 @@
  * File:    canvasscene.cpp
  * Author:  Rachel Bood
  * Date:    2014/11/07
- * Version: 1.25
+ * Version: 1.26
  *
  * Purpose: Initializes a QGraphicsScene to implement a drag and drop feature.
  *          still very much a WIP
@@ -114,7 +114,7 @@
  *  (a) Whenever a graph is created, append it to the canvasGraphList and
  *      similarly, whenever a graph is deleted, remove it from the list.
  *  (b) JD: tidy up comments, formatting, ...
- * Oct 9, 2020 (JD V1.25)
+ * Nov 9, 2020 (JD V1.25)
  *  (a) Since V1.14 graphs are no longer recursive structures.
  *	Simplify code that looks for the root given a node.
  *	Removed some other redundant tests.
@@ -123,6 +123,8 @@
  *	graph orbits around some "random" point when it is rotated via
  *	the "Edit Canvas Graph" tab.
  *  (c) The same as (b), but for the two-node join.
+ * Nov 11, 2020 (JD V1.26)
+ *  (a) Removed a now-bogus (due to updates to graph.cpp & node.cpp) comment.
  */
 
 #include "canvasscene.h"
@@ -914,8 +916,6 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 		    itemPos = item->scenePos(); // MUST BE scenePos(), NOT pos()
 		    item->setParentItem(newRoot);
 		    item->setPos(itemPos - mid);
-		    // This setRotation() does NOT change the rotation
-		    // for reasons unknown:
 		    item->setRotation(0);
 		}
 
@@ -934,8 +934,6 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 		    itemPos = item->scenePos(); // MUST BE scenePos(), NOT pos()
 		    item->setParentItem(newRoot);
 		    item->setPos(itemPos - mid);
-		    // This setRotation() does NOT change the rotation
-		    // for reasons unknown:
 		    item->setRotation(0);
 		}
 

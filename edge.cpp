@@ -2,7 +2,7 @@
  * File:    edge.cpp
  * Author:  Rachel Bood
  * Date:    2014/11/07
- * Version: 1.17
+ * Version: 1.18
  *
  * Purpose: creates an edge for the users graph
  *
@@ -84,6 +84,9 @@
  *  (a) Add chosen() to update the way the edge is drawn.
  * Oct 18, 2020 (JD V1.17)
  *  (a) Remove a spurious variable.
+ * Nov 11, 2020 (JD V1.18)
+ *  (a) Removed rotation attribute.  Modified code accordingly.
+ *  (b) Improved some comments.
  */
 
 #include "edge.h"
@@ -132,7 +135,6 @@ Edge::Edge(Node * sourceNode, Node * destNode)
     dest->addEdge(this);
     penStyle = 0;	// What type of pen style to use when drawing outline.
     penSize = 1;
-    rotation = 0;
     label = "";
     causedConnect = 0;
     destRadius = destNode->getDiameter() / 2.;
@@ -645,45 +647,46 @@ Edge::getPenWidth()
 
 /*
  * Name:	setRotation()
- * Purpose:	??
- * Arguments:
- * Output:
- * Modifies:
- * Returns:
- * Assumptions:
- * Bugs:
- * Notes:
+ * Purpose:	Sets the rotation of the edge.
+ * Arguments:	the new rotation amount.
+ * Outputs:	Nothing.
+ * Modifies:	The edge object.
+ * Returns:	Nothing.
+ * Assumptions: None.
+ * Bugs:	None known.
+ * Notes:	The node and edge labels need to be rotated in the
+ *		opposite direction of the graph rotation in order to
+ *		keep them oriented horizontally, right side up.
  */
 
 void
-Edge::setRotation(qreal aRotation)
+Edge::setRotation(qreal rotationAmount)
 {
-    qDeb() << "E::setRotation(" << aRotation
+    qDeb() << "E::setRotation(" << rotationAmount
 	   << ") call on edge(" << source->getLabel() << ", "
 	   << dest->getLabel() << ")";
 
-    rotation = aRotation;
-    QGraphicsItem::setRotation(aRotation);
+    QGraphicsItem::setRotation(rotationAmount);
 }
 
 
 
 /*
  * Name:	getRotation()
- * Purpose:	??
- * Arguments:
- * Output:
- * Modifies:
- * Returns:
- * Assumptions:
- * Bugs:
- * Notes:
+ * Purpose:	Getter for the edge's rotation.
+ * Arguments:	None.
+ * Outputs:	Nothing.
+ * Modifies:	Nothing.
+ * Returns:	The edge's rotation.
+ * Assumptions: None.
+ * Bugs:	Hard to imagine.
+ * Notes:	None.
  */
 
 qreal
 Edge::getRotation()
 {
-    return rotation;
+    return this->rotation();
 }
 
 
