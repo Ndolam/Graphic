@@ -2,7 +2,7 @@
  * File:    canvasscene.cpp
  * Author:  Rachel Bood
  * Date:    2014/11/07
- * Version: 1.26
+ * Version: 1.27
  *
  * Purpose: Initializes a QGraphicsScene to implement a drag and drop feature.
  *          still very much a WIP
@@ -125,6 +125,8 @@
  *  (c) The same as (b), but for the two-node join.
  * Nov 11, 2020 (JD V1.26)
  *  (a) Removed a now-bogus (due to updates to graph.cpp & node.cpp) comment.
+ * Nov 14, 2020 (JD V1.27)
+ *  (a) Update calls to Graph::boundingBox() as per change in args.
  */
 
 #include "canvasscene.h"
@@ -672,8 +674,8 @@ printGraphInfo(Graph * g, QString title)
     qDeb() << "   bounding rect center: " << g->boundingRect().center();
     qDeb() << "   rotation: " << g->getRotation();
     QPointF center;
-    QRectF bb = g->boundingBox(&center, false);
-    QRectF bb2 = g->boundingBox(&center, true);
+    QRectF bb = g->boundingBox(&center, false, nullptr);
+    QRectF bb2 = g->boundingBox(&center, true, nullptr);
     qDeb() << "   center is " << center;
     qDeb() << "   bb(node diam ignored) is " << bb;
     qDeb() << "   bb2(node diam used) is   " << bb2;
@@ -756,7 +758,8 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 
 		// Save canvas position of the "non-moving" graph.
 		QPointF g1Center;
-		QRectF g1Location = root1->boundingBox(&g1Center, false);
+		QRectF g1Location = root1->boundingBox(&g1Center, false,
+						       nullptr);
 
 		QPointF cn1a(connectNode1a->scenePos());
 		QPointF cn1b(connectNode1b->scenePos());
@@ -817,7 +820,7 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 
 		// Save canvas position of the second graph AFTER
 		// rotating and translating it (see usage below).
-		QRectF g2Location = root2->boundingBox(nullptr, false);
+		QRectF g2Location = root2->boundingBox(nullptr, false, nullptr);
 
 		// Set connectNode2a edges to connectNode1a edges
 		foreach (Edge * edge, connectNode2a->edges())
@@ -982,7 +985,8 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 
 		// Save canvas position of the "non-moving" graph.
 		QPointF g1Center;
-		QRectF g1Location = root1->boundingBox(&g1Center, false);
+		QRectF g1Location = root1->boundingBox(&g1Center, false,
+						       nullptr);
 
 		QPointF p1(connectNode1a->scenePos());
 		QPointF p2(connectNode2a->scenePos());
@@ -996,7 +1000,7 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 
 		// Save canvas position of the second graph AFTER
 		// translating it (see usage below).
-		QRectF g2Location = root2->boundingBox(nullptr, false);
+		QRectF g2Location = root2->boundingBox(nullptr, false, nullptr);
 
 		foreach (Edge * edge, connectNode2a->edges())
 		{

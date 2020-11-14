@@ -2,7 +2,7 @@
  * File:	graph.h
  * Author:	Rachel Bood
  * Date:	2014 or 2015?
- * Version:	1.6
+ * Version:	1.7
  *
  * Purpose:	Define the graph class.
  *
@@ -27,6 +27,8 @@
  *      for a graph, and, optionally the center of this box.
  * Nov 11, 2020 (JD V1.6)
  *  (a) Removed rotation as a graph attribute.
+ * Nov 14, 2020 (JD V1.7)
+ *  (a) Added the third arg to boundingBox().
  */
 
 #ifndef GRAPH_H
@@ -40,7 +42,7 @@ class Edge;
 
 class Graph : public QGraphicsObject
 {
-public:
+  public:
     typedef struct graph
     {
         QList<Node *> cycle;
@@ -64,16 +66,16 @@ public:
     void setRotation(qreal rotationAmount, bool rotationIsRelative);
     qreal getRotation();
     QGraphicsItem * getRootParent();
-    QRectF boundingBox(QPointF * center, bool useNodeSizes);
+    QRectF boundingBox(QPointF * center, bool useNodeSizes, QPointF * RGcenter);
 
-protected:
+  protected:
     void mouseReleaseEvent(QGraphicsSceneMouseEvent * event);
     void paint(QPainter * painter,
 	       const QStyleOptionGraphicsItem * option,
 	       QWidget * widget);
 
-private:
-     int moved;		// 1 means the graph was dropped onto the canvas.
+  private:
+    int moved;		// 1 means the graph was dropped onto the canvas.
 };
 
 #endif // GRAPH_H

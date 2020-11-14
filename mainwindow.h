@@ -2,7 +2,7 @@
  * File:	mainwindow.h
  * Author:	Rachel Bood
  * Date:	January 25, 2015.
- * Version:	1.24
+ * Version:	1.25
  *
  * Purpose:	Define the MainWindow class.
  *
@@ -84,6 +84,8 @@
  *  (a) Not all of the actions above were checked in.  Now they are.
  *  (b) Modify the collection of function and variable names to
  *	reflect the fact that many functions were moved to file-io.
+ * Nov 12, 2020 (JD V1.25)
+ *  (a) Rename resetCanvasGraphTab() to resetEditCanvasGraphTabWidgets()
  */
 
 
@@ -116,7 +118,7 @@ class MainWindow : public QMainWindow
     void set_Interface_Sizes();
 
   protected:
-    virtual void closeEvent (QCloseEvent *event);
+    virtual void closeEvent (QCloseEvent * event);
 
   private slots:
     bool saveGraph();
@@ -166,7 +168,7 @@ class MainWindow : public QMainWindow
     void updateDpiAndPreview();
 
     void updateCanvasGraphList();
-    void resetCanvasGraphTab();
+    void resetEditCanvasGraphTabWidgets();
 
     void style_Canvas_Graph(enum canvas_widget_ID what_changed);
     void style_Canvas_Graph(enum canvas_widget_ID what_changed,

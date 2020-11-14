@@ -2,7 +2,7 @@
  * File:	mainwindow.cpp
  * Author:	Rachel Bood
  * Date:	January 25, 2015.
- * Version:	1.66
+ * Version:	1.67
  *
  * Purpose:	Implement the main window and functions called from there.
  *
@@ -375,9 +375,11 @@
  *	when the user switches to it AND either a signal has been sent by
  *	canvasscene/view or a change was made on the canvas graph tab.
  *	(i.e. when ui->tabWidget->currentIndex() == 2 && updateNeeded == true)
+ *  (b) Reintroduce the on_tabWidget_currentChanged() function, but
+ *	with a much smaller job to do.
  * Sep 10, 2020 (IC V1.62)
  *  (a) resetCanvasGraphTab() added to reset the widgets on the canvas graph
- *	to their defaults whenever the selectedList is cleared. It also resets
+ *	to their defaults whenever the selectedList is cleared.  It also resets
  *	any static variables used in style_Canvas_Graph().
  * Sep 11, 2020 (IC V1.63)
  *  (a) somethingChanged() function now also calls updateCanvasGraphList()
@@ -426,6 +428,30 @@
  *  (h) Blocked many signals when widgets are programmatically
  *	changed, since these signals may cause generateGraph() to be
  *	called multiple times, and this may cause anomalous behaviour.
+ * Nov 14, 2020 (JD V1.67)
+ *  (a) Use Graph::boundingBox() instead to boundingRect() to get a
+ *	more accurate size of the graph for the Edit Canvas Graph tab.
+ *  (b) Rename resetCanvasGraphTab() to resetEditCanvasGraphTabWidgets(),
+ *	because it doesn't reset anything else there.
+ *	Rename editCanvasTab to editCanvasGraphTab for added specificity.
+ *  (c) Modify resetEditCanvasGraphTabWidgets() to (i) disable all the
+ *	widgets (except colour pickers) in the Edit Canvas Graph tab
+ *	if selectedList is empty, and (ii) to otherwise enable the
+ *	desired widgets.
+ *  (d) Improve the H & W values in the Edit Canvas Tab graph list by
+ *	using graph->boundingBox() rather than boundingRect(), and by
+ *	outputting them with g4 formats.
+ *  (e) Add setEditCanvasGraphTabWidgets() so that canvasview() can
+ *	change the widgets in this tab.
+ *  (g) Only call updateCanvasGraphList() from somethingChanged() if
+ *	the Edit Canvas Graph tab is visible.  But now call
+ *	updateCanvasGraphList() from on_tabWidget_currentChanged()
+ *	when switching to the Edit Canvas Graph tab.
+ *	See the comments in those functions for why this was needed.
+ *  (h) Changed style_Canvas_Graph() so that (i) H and W don't both
+ *	change when one is modified, (ii) joined and freestyle
+ *	graphs scale properly.
+ *  (i) Improve some comments.
  */
 
 #include "mainwindow.h"
@@ -449,7 +475,7 @@
 #include <QCloseEvent>
 
 // The tab order is set in mainwindow.ui.  If it changes, so must this:
-enum tab_IDs { previewTab = 0, editCanvasTab, editNodesAndEdgesTab };
+enum tab_IDs { previewTab = 0, editCanvasGraphTab, editNodesAndEdgesTab };
 
 // The unit of these is points:
 #define TITLE_SIZE	    20
@@ -780,9 +806,11 @@ QMainWindow(parent),
 	    (void(QDoubleSpinBox::*)(double))&QDoubleSpinBox::valueChanged,
 	    this, [this]() { style_Canvas_Graph(cGraphWidth_WGT); });
 
-    // Reset appropriate widgets and variables whenever selectedList changes.
+    // Reset appropriate widgets and variables whenever selectedList
+    // is changed.  Note that this signal is emitted by various
+    // functions in canvasview.cpp.
     connect(ui->canvas, SIGNAL(selectedListChanged()),
-	    this, SLOT(resetCanvasGraphTab()));
+	    this, SLOT(resetEditCanvasGraphTabWidgets()));
 
     // Initialize the canvas to be in "drag" mode.
     ui->dragMode_radioButton->click();
@@ -845,14 +873,14 @@ QMainWindow(parent),
 
 #ifdef DEBUG
     // Info to help with dealing with HiDPI issues
-    printf("Logical DPI: (%.3f, %.3f)\nPhysical DPI: (%.3f, %.3f)\n",
+    printf("MW::MW: Logical DPI: (%.3f, %.3f)\nPhysical DPI: (%.3f, %.3f)\n",
 	   screen->logicalDotsPerInchX(), screen->logicalDotsPerInchY(),
 	   screen->physicalDotsPerInchX(), screen->physicalDotsPerInchY());
-    printf("Physical size (mm): ht %.1f, wd %.3f\n",
+    printf("      Physical size (mm): ht %.1f, wd %.3f\n",
 	   screen->physicalSize().height(), screen->physicalSize().width());
-    printf("Pixel resolution:  %d, %d\n",
+    printf("      Pixel resolution:  %d, %d\n",
 	   screen->size().height(), screen->size().width());
-    printf("screen->devicePixelRatio: %.3f\n", screen->devicePixelRatio());
+    printf("     screen->devicePixelRatio: %.3f\n", screen->devicePixelRatio());
     fflush(stdout);
 #endif
 }
@@ -927,7 +955,12 @@ void
 MainWindow::somethingChanged()
 {
     promptSave = true;
-    updateCanvasGraphList();
+
+    // If we are not in this tab, no use updating it, since it is
+    // updated by on_tabWidget_currentChanged() when we switch to the
+    // edit canvas graph tab.
+    if (ui->tabWidget->currentIndex() == editCanvasGraphTab)
+	updateCanvasGraphList();
 }
 
 
@@ -1049,7 +1082,7 @@ MainWindow::generateGraph(enum widget_ID changed_widget)
 
     if (ui->preview->items().count() == 0)
     {
-	qDeb() << "\tpreview is empty, resetting cGI to -1";
+	qDeb() << "\tpreview is empty, resetting currentGraphIndex to -1";
 	currentGraphIndex = -1;
     }
 
@@ -1908,20 +1941,25 @@ MainWindow::on_tabWidget_currentChanged(int index)
     switch (index)
     {
       case previewTab:
-	ui->dragMode_radioButton->click();
 	ui->selectMode_radioButton->setEnabled(false);
+	ui->dragMode_radioButton->click();
 	break;
 
-      case editCanvasTab:
+      case editCanvasGraphTab:
 	ui->selectMode_radioButton->setEnabled(true);
 	ui->selectMode_radioButton->click();
+	resetEditCanvasGraphTabWidgets();
+	// TODO: As of Nov 2020 not all conditions that change the
+	// canvas are caught, and so we can't be sure somethingChanged
+	// is called, so we call it from here when switching in.
+	updateCanvasGraphList();
 	break;
 
       case editNodesAndEdgesTab:
 	if (updateNeeded)
 	    updateEditTab();
-	ui->dragMode_radioButton->click();
 	ui->selectMode_radioButton->setEnabled(false);
+	ui->dragMode_radioButton->click();
 	break;
 
       default:
@@ -2365,11 +2403,11 @@ MainWindow::closeEvent(QCloseEvent * event)
  *		relevant information to the following overloaded function.
  * Arguments:	The changed widget ID.
  * Outputs:	Nothing.
- * Modifies:	The drawing of the canvas graph.
+ * Modifies:	The drawing of the canvas graph (indirectly).
  * Returns:	Nothing.
  * Assumptions: ?
  * Bugs:	?
- * Notes:	Closely mimics the style_graph() function.
+ * Notes:	Closely mimics the style_graph() function.  Sort of.
  */
 
 void
@@ -2417,7 +2455,6 @@ MainWindow::style_Canvas_Graph(enum canvas_widget_ID what_changed)
  *		graph scales the graph in the rotated coordinate system.
  *		TODO: the height and width widgets could arguably be
  *		set to the right size when a single graph is selected.
- *		TODO: The size in the "Graph List" is approximate only.
  * Notes:	Rotation only works if an entire graph is selected.
  */
 
@@ -2435,6 +2472,7 @@ MainWindow::style_Canvas_Graph(enum canvas_widget_ID what_changed,
 			       qreal nodeThickness,	bool edgeLabelsNumbered,
 			       qreal edgeNumStart)
 {
+    qDeb() << "MW::style_Canvas_Graph(........) called";
     int i = nodeNumStart;
     int j = edgeNumStart;
 
@@ -2443,6 +2481,8 @@ MainWindow::style_Canvas_Graph(enum canvas_widget_ID what_changed,
 	if (item->type() == Node::Type)
 	{
 	    Node * node = qgraphicsitem_cast<Node *>(item);
+
+	    qDeb() << "   looking at node with label " << node->getLabel();
 
 	    node->physicalDotsPerInchX = currentPhysicalDPI_X;
 
@@ -2467,6 +2507,9 @@ MainWindow::style_Canvas_Graph(enum canvas_widget_ID what_changed,
 	else if (item->type() == Edge::Type)
 	{
 	    Edge * edge = qgraphicsitem_cast<Edge *>(item);
+
+	    qDeb() << "   looking at edge with label " << edge->getLabel();
+
 	    GUARD(cEdgeThickness_WGT) edge->setPenWidth(edgeSize);
 	    GUARD(cEdgeLineColour_WGT) edge->setColour(edgeLineColour);
 	    GUARD(cEdgeLabelSize_WGT)
@@ -2488,66 +2531,105 @@ MainWindow::style_Canvas_Graph(enum canvas_widget_ID what_changed,
 	else if (item->type() == Graph::Type)
 	{
 	    Graph * graph = qgraphicsitem_cast<Graph *>(item);
-	    qDeb() << "	  graph currently located at " << graph->x() << ", "
+	    qDeb() << "   graph currently located at " << graph->x() << ", "
 		   << graph->y();
 
 	    GUARD(cGraphRotation_WGT)
 	    {
-		// Origin point of freestyleGraph is bogus... so the rotation
-		// looks horrible. PROBLEM IS TRANSFORM ORIGIN POINT
-		int netRotation = rotation - previousRotation;
+		// Origin of freestyle graphs is not in the middle of
+		// the graph, which means rotation also orbits around
+		// some "random" place.
+		// TODO: either do a translate before and after this
+		// rotation, or fix freestyle graphs so that their
+		// origin is in the middle of the points.
+		qreal netRotation = rotation - previousRotation;
 		graph->setRotation(-1 * netRotation, true);
 	    }
+
 	    if (what_changed == cGraphWidth_WGT
 		|| what_changed == cGraphHeight_WGT)
 	    {
-		// A lot of this is inaccurate. totalWidth and totalHeight
-		// should refer to each selected graph's dimensions.
-		// nodeDiameter should probably also be calculated instead
-		// of using the widget value. We also need to factor in
-		// the difference between the current value of the width/
-		// height widgets and their previous values so we know how
-		// much to adjust the graphs in relative terms instead of
-		// absolute terms. Lastly, we should only really increment
-		// either width or height, depending on which widget was the
-		// one that changed, instead of both simultaneously.
-		qreal centerWidth = totalWidth - nodeDiameter;
-		if (centerWidth < 0.1)
-		    centerWidth = 0.1;
-		qreal widthScaleFactor = centerWidth * currentPhysicalDPI_X;
-		qreal centerHeight = totalHeight - nodeDiameter;
-		if (centerHeight < 0.1)
-		    centerHeight = 0.1;
-		qreal heightScaleFactor = centerHeight * currentPhysicalDPI_Y;
+		// While the rotation widget is relative to the
+		// previous rotation, the H and W widgets are current
+		// values (averages of all graphs selected).  To make
+		// them relative, we would need to allow the widgets
+		// to be negative.  Do we want that?
+
+		// In the preview, a graph might not fill the
+		// requested bounding box in order to maintain symmetry.
+		// However, here we only know the current actual size
+		// of a graph, and so we scale according to its current
+		// bounding box, not any information left over from
+		// the preview (which is inaccurate for joined graphs
+		// and non-existent for freestyle graphs anyway).
+
+		QPointF center, RGcenter;
+		QRectF bb = graph->boundingBox(&center, true, nullptr);
+		QRectF bb2 = graph->boundingBox(nullptr, false, &RGcenter);
+		qDeb() << "    bb is " << bb;
+		qDeb() << "    center is " << center;
+		qDeb() << "    bb2 is " << bb2;
+
+		// Since we are not scaling the node sizes, we must
+		// subtract their contribution to the overall size
+		// from the desired size before computing the scale
+		// factors.
+		qreal nodeDiamWidthSlop = bb.width() - bb2.width();
+		qreal nodeDiamHeightSlop = bb.height() - bb2.height();
+		
+		qreal widthScaleFactor = 1, heightScaleFactor = 1;
+		GUARD(cGraphWidth_WGT) widthScaleFactor
+		    = (totalWidth * currentPhysicalDPI_X - nodeDiamWidthSlop)
+		    / bb2.width();
+		GUARD(cGraphHeight_WGT) heightScaleFactor
+		    = (totalHeight *  currentPhysicalDPI_Y - nodeDiamHeightSlop)
+		    / bb2.height();
 
 		qDeb() << "    Desired total width: " << totalWidth
-		       << "; desired center width " << centerWidth
-		       << "\n\twidthScaleFactor: " << widthScaleFactor;
+		       << "; width = " << bb.width() / currentPhysicalDPI_X
+		       << "; widthScaleFactor = " << widthScaleFactor;
 		qDeb() << "    Desired total height: " << totalHeight
-		       << "; desired center height " << centerHeight
-		       << "\n\theightScaleFactor: " << heightScaleFactor;
+		       << "; height = " << bb.height() / currentPhysicalDPI_Y
+		       << "; heightScaleFactor = " << heightScaleFactor;
+
+		qreal xmid = RGcenter.x();
+		qreal ymid = RGcenter.y();
+		qDebu("    Center in graph coords is (%.4f, %.4f)\n",
+		      xmid, ymid);
+		qDebu("    Center in scene coords is (%.4f, %.4f)\n",
+		      center.x(), center.y());
 
 		foreach (QGraphicsItem * child, graph->childItems())
 		{
 		    if (child->type() == Node::Type)
 		    {
+			// We want to scale wrt the center of the graph.
 			Node * node = qgraphicsitem_cast<Node *>(child);
-			// Freestyle nodes dont have previewX/Y values...
-			node->setPos(node->getPreviewX() * widthScaleFactor,
-				     node->getPreviewY() * heightScaleFactor);
+			qreal newx = (child->pos().x() - xmid)
+			    * widthScaleFactor + xmid;
+			qreal newy = (child->pos().y() - ymid)
+			    * heightScaleFactor + ymid;
+			qDeb() << "   Moving node '" << node->getLabel()
+			       << "' from " << child->pos() << " to ("
+			       << newx << ", " << newy << ")";
+			child->setPos(newx, newy);
+			qDeb() << "    NOW node.pos() is " << child->pos();
 		    }
-		}
+		}		
+		qDeb() << "   END: graph now located at "
+		       << graph->x() << ", " << graph->y();
 	    }
 	}
     }
-    // Once thickness has be fixed to affect the boundingRect, it should be
-    // included here. You might also want to consider large labels?
-    if (what_changed == cNodeDiam_WGT ||
-	what_changed == cGraphWidth_WGT ||
-	what_changed == cGraphHeight_WGT ||
-	what_changed == cGraphRotation_WGT)
-	updateCanvasGraphList();
 
+    // If ever the pen width is taken into account for the boundingBox(),
+    // that widget should be included here.
+    // TODO: Should we take (large) labels into account as well?
+    if (what_changed == cNodeDiam_WGT
+	|| what_changed == cGraphWidth_WGT
+	|| what_changed == cGraphHeight_WGT
+	|| what_changed == cGraphRotation_WGT)
+	updateCanvasGraphList();
 
     previousRotation = ui->cGraphRotation->value();
     updateNeeded = true;
@@ -2567,16 +2649,22 @@ MainWindow::style_Canvas_Graph(enum canvas_widget_ID what_changed,
  * Returns:	Nothing.
  * Assumptions: ?
  * Bugs:	None known.
- * Notes:	None.
+ * Notes:	The Create Graph tab H & W specify the size of a bounding
+ *		box into which a maximally-large graph is drawn *symmetrically*.
+ *		The graph may not occupy the entire box.
+ *		Contrariwise, the H & W displayed here give the actual
+ *		size (except the pen size is not taken into account,
+ *		which is also currently the case when using the Create
+ *		Graph tab).
  */
 
 void
 MainWindow::updateCanvasGraphList()
 {
-    // Clear the list, sadly..
+    qDeb() << "MW::updateCanvasGraphList() called";
+    // Clear the list, sadly...
     QLayoutItem * wItem;
-    while ((wItem = ui->graphListLayout->layout()->takeAt(1))
-	   != 0)
+    while ((wItem = ui->graphListLayout->layout()->takeAt(1)) != nullptr)
     {
 	if (wItem->widget())
 	    wItem->widget()->setParent(NULL);
@@ -2592,12 +2680,16 @@ MainWindow::updateCanvasGraphList()
 	QLabel * graphLabel = new QLabel("Graph " + QString::number(i));
 	ui->graphListLayout->addWidget(graphLabel, i, 0);
 
-	qreal height = graph->boundingRect().height()/currentPhysicalDPI_Y;
-	QLabel * heightLabel = new QLabel("Height: " + QString::number(height));
+	QRectF bb = graph->boundingBox(nullptr, true, nullptr);
+
+	qreal height = bb.height() / currentPhysicalDPI_Y;
+	QLabel * heightLabel = new QLabel("Height: "
+					  + QString::number(height, 'g', 4));
 	ui->graphListLayout->addWidget(heightLabel, i, 1);
 
-	qreal width = graph->boundingRect().width()/currentPhysicalDPI_X;
-	QLabel * widthLabel = new QLabel("Width: " + QString::number(width));
+	qreal width = bb.width() / currentPhysicalDPI_X;
+	QLabel * widthLabel = new QLabel("Width: "
+					 + QString::number(width, 'g', 4));
 	ui->graphListLayout->addWidget(widthLabel, i, 2);
 
 	connect(graph, SIGNAL(destroyed(QObject*)),
@@ -2614,9 +2706,12 @@ MainWindow::updateCanvasGraphList()
 
 
 /*
- * Name:	resetCanvasGraphTab()
+ * Name:	resetEditCanvasGraphTabWidgets()
  * Purpose:	Ensures that the widgets on the canvas graph tab are reset
- *		to their defaults whenever the selectedList is cleared.
+ *		to their defaults and disabled whenever the
+ *		selectedList is emptied.
+ *		When selectedList is set to something non-empty,
+ *		enable and set appropriate widgets.
  * Arguments:	None.
  * Outputs:	Nothing.
  * Modifies:	The widgets on the canvas graph tab.
@@ -2630,27 +2725,136 @@ MainWindow::updateCanvasGraphList()
  */
 
 void
-MainWindow::resetCanvasGraphTab()
+MainWindow::resetEditCanvasGraphTabWidgets()
 {
-    previousRotation = 0;
-    ui->cGraphRotation->setValue(0);
+    if (selectedList.isEmpty())
+    {
+	qDeb() << "MW::resetEditCanvasGraphTabWidgets() called when "
+	       << "selectedList is empty";
 
-    ui->cGraphHeight->setValue(2.50);
-    ui->cGraphWidth->setValue(2.50);
+	ui->cGraphHeight->setValue(2.50);
+	ui->cGraphHeight->setDisabled(true);
+	ui->cGraphWidth->setValue(2.50);
+	ui->cGraphWidth->setDisabled(true);
 
-    ui->cNodeThickness->setValue(1.0);
-    ui->cNodeLabelSize->setValue(12);
-    ui->cNodeDiameter->setValue(0.20);
+	previousRotation = 0;
+	ui->cGraphRotation->setValue(0);
+	ui->cGraphRotation->setDisabled(true);
 
-    ui->cEdgeThickness->setValue(1.0);
-    ui->cEdgeLabelSize->setValue(12);
+	ui->cNodeLabel1->setText("");
+	ui->cNodeLabel1->setDisabled(true);
+	ui->cNodeNumLabelStart->setValue(0);
+	ui->cNodeNumLabelStart->setDisabled(true);
+	ui->cNodeNumLabelCheckBox->setChecked(false);
+	ui->cNodeNumLabelCheckBox->setDisabled(true);
 
-    ui->cNodeNumLabelStart->setValue(0);
-    ui->cEdgeNumLabelStart->setValue(0);
+	ui->cNodeThickness->setValue(1.0);
+	ui->cNodeThickness->setDisabled(true);
+	ui->cNodeLabelSize->setValue(12);
+	ui->cNodeLabelSize->setDisabled(true);
+	ui->cNodeDiameter->setValue(0.20);
+	ui->cNodeDiameter->setDisabled(true);
 
-    ui->cNodeNumLabelCheckBox->setChecked(false);
-    ui->cEdgeNumLabelCheckBox->setChecked(false);
+	ui->cEdgeLabelEdit->setText("");
+	ui->cEdgeLabelEdit->setDisabled(true);
+	ui->cEdgeNumLabelStart->setValue(0);
+	ui->cEdgeNumLabelStart->setDisabled(true);
+	ui->cEdgeNumLabelCheckBox->setChecked(false);
+	ui->cEdgeNumLabelCheckBox->setDisabled(true);
 
-    ui->cEdgeLabelEdit->setText("");
-    ui->cNodeLabel1->setText("");
+	ui->cEdgeThickness->setValue(1.0);
+	ui->cEdgeThickness->setDisabled(true);
+	ui->cEdgeLabelSize->setValue(12);
+	ui->cEdgeLabelSize->setDisabled(true);
+    }
+    else
+    {
+	qDeb() << "MW::resetEditCanvasGraphTabWidgets() called when "
+	       << "selectedList is NOT empty";
+	int num_graphs = 0, num_edges = 0, num_nodes = 0;
+	qreal total_ht = 0, total_wd = 0;
+	qreal total_e_lsize = 0, total_e_thick = 0;
+	qreal total_n_lsize = 0, total_n_thick = 0, total_n_diam = 0;
+	foreach (QGraphicsItem * item, selectedList)
+	{
+	    if (item->type() == Node::Type)
+	    {
+		Node * node = qgraphicsitem_cast<Node *>(item);
+		num_nodes++;
+		total_n_thick += node->getPenWidth();
+		total_n_lsize += node->getLabelSize();
+		total_n_diam += node->getDiameter();
+	    }
+	    else if (item->type() == Edge::Type)
+	    {
+		Edge * edge = qgraphicsitem_cast<Edge *>(item);
+		num_edges++;
+		total_e_thick += edge->getPenWidth();
+		total_e_lsize += edge->getLabelSize();
+	    }
+	    else if (item->type() == Graph::Type)
+	    {
+		Graph * graph = qgraphicsitem_cast<Graph *>(item);
+		num_graphs++;
+		QRectF bbox = graph->boundingBox(nullptr, true, nullptr);
+		total_wd += bbox.width();
+		total_ht += bbox.height();
+	    }
+	}
+
+	// Changing widgets causes style_Canvas_Graph() to be called.
+	// The Right Way to do it is to call
+	//     ui->[widget]->blockSignals(true);
+	//     ui->[widget]->setValue(...);
+	//     ui->[widget]->blockSignals(false);
+	// How tedious.
+	// Instead, since style_Canvas_Graph() returns immediately if
+	// selectedList is empty, empty it before changing widgets.
+	// Restore it when done tweaking widgets.
+	QList<QGraphicsItem *> selectedListHold = selectedList;
+	selectedList.clear();
+
+	if (num_graphs > 0)
+	{
+	    ui->cGraphHeight->setValue(total_ht
+				       / num_graphs / currentPhysicalDPI_Y);
+	    ui->cGraphHeight->setDisabled(false);
+
+	    ui->cGraphWidth->setValue(total_wd
+				      / num_graphs / currentPhysicalDPI_X);
+	    ui->cGraphWidth->setDisabled(false);
+
+	    ui->cGraphRotation->setValue(0);
+	    ui->cGraphRotation->setDisabled(false);
+	}
+
+	if (num_nodes > 0)
+	{
+	    ui->cNodeLabel1->setDisabled(false);
+	    ui->cNodeNumLabelStart->setDisabled(false);
+	    ui->cNodeNumLabelCheckBox->setDisabled(false);
+
+	    ui->cNodeThickness->setValue(total_n_thick / num_nodes);
+	    ui->cNodeThickness->setDisabled(false);
+	    ui->cNodeLabelSize->setValue(total_n_lsize / num_nodes);
+	    ui->cNodeLabelSize->setDisabled(false);
+	    ui->cNodeDiameter->setValue(total_n_diam / num_nodes);
+	    ui->cNodeDiameter->setDisabled(false);
+	}
+
+	if (num_edges > 0)
+	{
+	    ui->cEdgeLabelEdit->setDisabled(false);
+	    ui->cEdgeNumLabelStart->setDisabled(false);
+	    ui->cEdgeNumLabelCheckBox->setDisabled(false);
+
+	    ui->cEdgeThickness->setValue(total_e_thick / num_edges);
+	    ui->cEdgeThickness->setDisabled(false);
+	    ui->cEdgeLabelSize->setValue(total_e_lsize / num_edges);
+	    ui->cEdgeLabelSize->setDisabled(false);
+	}
+
+	// Restore:
+	selectedList = selectedListHold;
+    }
 }

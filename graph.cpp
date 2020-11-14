@@ -2,7 +2,7 @@
  * File:    graph.cpp
  * Author:  Rachel Bood
  * Date:    2014/11/07 (?)
- * Version: 1.9
+ * Version: 1.10
  *
  * Purpose:
  *
@@ -50,6 +50,11 @@
  *  (a) Removed rotation as a graph attribute, since a graph is a
  *	qgraphicsitem, which has a rotation (don't store the same info
  *	in two places).  Modified code accordingly.
+ * Nov 14, 2020 (JD V1.10)
+ *  (a) Add a third arg to boundingBox() which can be used to return
+ *	the geographic center of the nodes in the graph coordinate system.
+ *  (b) Fix bug in boundingBox() which didn't deal with the first node
+ *	correctly.
  */
 
 #include "graph.h"
@@ -100,13 +105,19 @@ Graph::Graph()
 /*
  * Name:	boundingBox()
  * Purpose:	Return information about the graph, as computed from
- *		the nodes' screen coords, and possible the node diameters.
+ *		the nodes' screen coords, and optionally the node diameters.
  *		Also calculate and return the center of the graph,
  *		using only the node screen coords.
- * Arguments:	A "copy out" QPointF for the center (or nullptr if
- *		this information is not desired), and a Boolean
- *		which indicates whether the individual node diameters
+ *		Optionally also return the center of all the nodes
+ *		relative to the center of the graph.
+ * Arguments:	A "copy out" QPointF for the center of the graph
+ *		(relative to the scene) (or nullptr if this
+ *		information is not desired), and a Boolean which
+ *		indicates whether the individual node diameters
  *		should be taken into account.
+ *		Another (Relative to Graph) center argument for the
+ *		center of the node locations relative to the graph
+ *		coordinate system.
  * Outputs:	Nothing.
  * Modifies:	The pointer parameter.
  * Returns:	The QRectF as described above.
@@ -119,41 +130,74 @@ Graph::Graph()
  */
 
 QRectF
-Graph::boundingBox(QPointF * center, bool useNodeSizes)
+Graph::boundingBox(QPointF * center, bool useNodeSizes, QPointF * RGcenter)
 {
     qreal minx = 0, maxx = 0, miny = 0, maxy = 0;
+    qreal RGminx = 0, RGmaxx = 0, RGminy = 0, RGmaxy = 0;
     bool firstNode = true;
-    qreal r, x, y;
+    qreal r, x, y, RGx, RGy;
+
+    qDebu("G:bB(%p, %c) called on graph at %p", center,
+	  useNodeSizes ? 'T' : 'F', this);
 
     foreach (QGraphicsItem * item, this->childItems())
     {
 	switch (item->type())
 	{
 	  case Node::Type:
-	    x = item->scenePos().rx();
-	    y = item->scenePos().ry();
+	    x = item->scenePos().x();
+	    y = item->scenePos().y();
+	    RGx = item->pos().x();
+	    RGy = item->pos().y();
+
+	    if (useNodeSizes)
+	    {
+		// If we wish to take the node diameter into account we
+		// must convert from inches to screen coords.
+		r = (qgraphicsitem_cast<Node *>(item))->getDiameter() / 2
+		    * currentPhysicalDPI;
+	    }
+	    else
+		r = 0;
+
 	    if (firstNode)
 	    {
 		firstNode = false;
-		minx = maxx = x;
-		miny = maxy = y;
-	    }
-	    r = 0;
-
-	    // If we wish to take the node diameter into account we
-	    // must convert from inches to screen coords.
-	    if (useNodeSizes)
-		r = (qgraphicsitem_cast<Node *>(item))->getDiameter() / 2
-		    * currentPhysicalDPI;
-
-	    if (x + r > maxx)
-		maxx = x + r;
-	    else if (x - r < minx)
 		minx = x - r;
-	    if (y + r > maxy)
-		maxy = y + r;
-	    else if (y - r < miny)
+		maxx = x + r;
 		miny = y - r;
+		maxy = y + r;
+		RGminx = RGx;
+		RGmaxx = RGx;
+		RGminy = RGy;
+		RGmaxy = RGy;
+	    }
+	    else
+	    {
+		if (x + r > maxx)
+		    maxx = x + r;
+		else if (x - r < minx)
+		    minx = x - r;
+		if (y + r > maxy)
+		    maxy = y + r;
+		else if (y - r < miny)
+		    miny = y - r;
+
+		if (RGx > RGmaxx)
+		    RGmaxx = RGx;
+		else if (RGx < RGminx)
+		    RGminx = RGx;
+		if (RGy > RGmaxy)
+		    RGmaxy = RGy;
+		else if (RGy < RGminy)
+		    RGminy = RGy;
+	    }
+	    qDeb() << "    scene: x = " << x << ", y = " << y << ", r = " << r;
+	    qDebu("        scene x's: [%.4f, %.4f], y's: [%.4f, %.4f]",
+		  minx, maxx, miny, maxy);
+	    qDeb() << "    RG:    x = " << RGx << ", y = " << RGy;
+	    qDebu("        RG:   x's: [%.4f, %.4f], y's: [%.4f, %.4f]",
+		  RGminx, RGmaxx, RGminy, RGmaxy);
 	    break;
 
 	  case Graph::Type:
@@ -163,13 +207,27 @@ Graph::boundingBox(QPointF * center, bool useNodeSizes)
 	}
     }
 
+    QRectF rect (minx, miny, maxx - minx, maxy - miny);
     if (center != nullptr)
     {
 	center->setX((maxx + minx) / 2.);
 	center->setY((maxy + miny) / 2.);
+	qDeb() << "G::bB: center is " << *center << " and BB rect is " << rect;
     }
-    QRectF rect (minx, miny, maxx - minx, maxy - miny);
-    // qDeb() << "G::bB: center is " << *center << " and BB rect is " << rect;
+    else
+	qDeb() << "G::bB: center is [" << (maxx + minx) / 2. << ", "
+	       <<  (maxy + miny) / 2. << "] and BB rect is " << rect;
+
+    if (RGcenter != nullptr)
+    {
+	RGcenter->setX((RGmaxx + RGminx) / 2.);
+	RGcenter->setY((RGmaxy + RGminy) / 2.);
+	qDeb() << "G::bB: RGcenter is " << *RGcenter;
+    }
+    else
+	qDeb() << "G::bB: RGcenter is [" << (RGmaxx + RGminx) / 2. << ", "
+	       <<  (RGmaxy + RGminy) / 2. << "]";
+
     return rect;
 }
 
