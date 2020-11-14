@@ -2,7 +2,7 @@
  * File:    canvasview.cpp
  * Author:  Rachel Bood
  * Date:    2014/11/07
- * Version: 1.28
+ * Version: 1.29
  *
  * Purpose: Initializes a QGraphicsView that is used to house the
  *	    QGraphicsScene.
@@ -106,6 +106,10 @@
  *	the canvas was cleared.
  * Oct 18, 2020 (JD V1.28)
  *  (a) Fix a spurious "color" spelling.
+ * Nov 14, 2020 (JD V1.29)
+ *  (a) Emit selectedListChanged() when the mouse is released in Select mode
+ *      so that the edit canvas graph widgets will update appropriately.
+ *  (b) Add comments, cleanup, ...
  */
 
 #include "canvasview.h"
@@ -552,7 +556,7 @@ CanvasView::mousePressEvent(QMouseEvent * event) // Should this be in CS?
 			// boundingRects are drawn.
 
 			// qDeb() << "node1->pos() is " << node1->pos();
-			// qDeb() << "node1->scenePos() is " << node1->scenePos();
+			// qDeb() << "node1->scenePos() is " <<node1->scenePos();
 			// TODO: without this horrible hack, edges
 			// connecting two nodes of a library graph
 			// (dragged over from the preview pane) are drawn
@@ -564,7 +568,7 @@ CanvasView::mousePressEvent(QMouseEvent * event) // Should this be in CS?
 			node1->setPos(n1pos + QPoint(10, 10));
 			node1->setPos(n1pos);
 			// qDeb() << "node1->pos() is " << node1->pos();
-			// qDeb() << "node1->scenePos() is " << node1->scenePos();
+			// qDeb() << "node1->scenePos() is " <<node1->scenePos();
 		    }
 		    // Update vars so that another click on a node
 		    // continues a path.
@@ -576,6 +580,7 @@ CanvasView::mousePressEvent(QMouseEvent * event) // Should this be in CS?
 		}
 	    }
 	}
+
 	if (clickedInEmptySpace)
 	{
 	    qDeb() << "\t\tclicked in empty space, clearing node1 & 2";
@@ -587,13 +592,12 @@ CanvasView::mousePressEvent(QMouseEvent * event) // Should this be in CS?
 	break;
 
       case (mode::select):
-	//
 	if (event->button() == Qt::LeftButton)
 	{
 	    qDeb() << "\tLeftButton pressed in select mode";
 
 	    // If you want to be able to select items individually, try:
-	    //if (event->modifiers().testFlag(Qt::ControlModifier))
+	    // if (event->modifiers().testFlag(Qt::ControlModifier))
 	    // then add the item at the event->pos() to the selectedList.
 	    // and perhaps return so that you don't promptly clear the
 	    // selectedList :)
@@ -633,18 +637,33 @@ CanvasView::mousePressEvent(QMouseEvent * event) // Should this be in CS?
 }
 
 
+
 void
 CanvasView::mouseMoveEvent(QMouseEvent * event)
 {
     //	qDeb() << "CV::mouseMoveEvent";
     if (getMode() == CanvasView::select)
-    {
 	selectionBand->setGeometry(QRect(origin, event->pos()).normalized());
-    }
     else
 	QGraphicsView::mouseMoveEvent(event);
 }
 
+
+
+/*
+ * Name:	mouseReleaseEvent()
+ * Purpose:	When the mouse button is released, if Select mode is
+ *		active deal with the event.
+ * Arguments:	The mouse event.
+ * Outputs:	Nothing.
+ * Modifies:	The list of selected 
+ * Returns:	Nothing.
+ * Assumptions:	The only tab that uses the Select mode is Edit Canvas Graph.
+ * Bugs:	None known.
+ * Notes:	Some refactoring will probably be needed if Select
+ *		mode is ever upgraded to allow selecting items by
+ *		clicking, a la Join mode or Freestyle mode.
+ */
 
 void
 CanvasView::mouseReleaseEvent(QMouseEvent * event)
@@ -653,6 +672,7 @@ CanvasView::mouseReleaseEvent(QMouseEvent * event)
 
     if (getMode() == CanvasView::select)
     {
+	qDeb() << "CV::mouseReleaseEvent(" << event->pos() << ") in select mode";
 	end = event->pos();
 
 	// Find the top left corner manually since selectionBand.topleft()
@@ -663,16 +683,17 @@ CanvasView::mouseReleaseEvent(QMouseEvent * event)
 	QRect rect(topleft, selectionBand->size());
 
 	// Update the global list with selected items.
-	selectedList = this->scene()->items(
-		    this->mapToScene(rect),
-		    Qt::ContainsItemShape,
-		    Qt::AscendingOrder,
-		    QTransform());
+	selectedList
+	    = this->scene()->items(this->mapToScene(rect),
+				   Qt::ContainsItemShape,
+				   Qt::AscendingOrder,
+				   QTransform());
 
 	// Sometimes all items are selected, but the graph isn't due to
-	// bounding rect issues. So check and add graph if necessary.
+	// bounding rect issues.  So check and add graph if necessary.
 	if (!selectedList.isEmpty())
 	{
+	    qDeb() << "  ... selectedList is NOT empty";
 	    QList<Graph *> graphList;
 	    bool missingItems;
 
@@ -680,16 +701,20 @@ CanvasView::mouseReleaseEvent(QMouseEvent * event)
 	    // children that are selected.
 	    foreach (QGraphicsItem * item, selectedList)
 	    {
+		// If item is not a top-level item (and thus not a
+		// graph) find its top-level item (i.e., a graph).
 		while (item->parentItem() != nullptr)
 		    item = item->parentItem();
 		Graph * graph = qgraphicsitem_cast<Graph *>(item);
 		if (!selectedList.contains(graph) && !graphList.contains(graph))
 		    graphList.append(graph);
 	    }
+
 	    // Check if each entire graph is selected and add to selectedList
 	    // if so.
 	    foreach (Graph * graph, graphList)
 	    {
+		qDeb() << " ... checking a graph in graphList...";
 		missingItems = false;
 		foreach (QGraphicsItem * child, graph->childItems())
 		{
@@ -718,6 +743,12 @@ CanvasView::mouseReleaseEvent(QMouseEvent * event)
 		edge->chosen(1);
 	    }
 	}
+
+	// Enable appropriate widgets in the Edit Canvas Graph tab:
+	qDeb() << "  CV::mouseReleaseEvent() emitting selectedListChanged()";
+	emit selectedListChanged();
+
+	// We're done with this, make it go away.
 	selectionBand->hide();
     }
     else
