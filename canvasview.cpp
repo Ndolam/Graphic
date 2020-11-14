@@ -2,7 +2,7 @@
  * File:    canvasview.cpp
  * Author:  Rachel Bood
  * Date:    2014/11/07
- * Version: 1.29
+ * Version: 1.30
  *
  * Purpose: Initializes a QGraphicsView that is used to house the
  *	    QGraphicsScene.
@@ -110,6 +110,11 @@
  *  (a) Emit selectedListChanged() when the mouse is released in Select mode
  *      so that the edit canvas graph widgets will update appropriately.
  *  (b) Add comments, cleanup, ...
+ * Nov 14, 2020 (JD V1.30)
+ *  (a) When a freestyle graph is "finished" being created, reset its
+ *	origin to be in the geographic center of the node centers, so
+ *	that if/when it is rotated via the Edit Canvas Graph tab, it
+ *	doesn't orbit around the scene origin.
  */
 
 #include "canvasview.h"
@@ -224,8 +229,8 @@ CanvasView::createNode(QPointF pos)
     node->setRotation(0);
     node->setFillColour(nodeParams->fillColour);
     node->setLineColour(nodeParams->outlineColour);
-    node->setPos(pos.rx(), pos.ry());
     node->setParentItem(freestyleGraph);
+    node->setPos(pos.x(), pos.y());
     return node;
 }
 
@@ -383,14 +388,37 @@ CanvasView::setMode(int m)
 	return;
     }
 
-    if (lastModeType == mode::freestyle) // Deletes empty freestyle graph
+    if (lastModeType == mode::freestyle)
     {
-	if (freestyleGraph  != nullptr)
+	if (freestyleGraph != nullptr)
 	{
+	    // Delete freestyle graph if it is empty.
+	    // Otherwise set the graph origin to the middle of the nodes.
 	    if (freestyleGraph->childItems().isEmpty())
 	    {
 		aScene->removeItem(freestyleGraph);
 		delete freestyleGraph;
+	    }
+	    else
+	    {
+		// Note that since the origin of a freestyleG graph is
+		// initially (0, 0), the nodes' center wrt the scene
+		// is the same as the center wrt the graph itself.
+		QPointF center;
+		QRectF bb = freestyleGraph->boundingBox(&center, false, nullptr);
+		qDeb() << "CV::setMode() finalizing freestyleGraph";
+		qDeb() << "     bbox:   " << bb;
+		qDeb() << "     center: " << center;
+
+		foreach (QGraphicsItem * item, freestyleGraph->childItems())
+		{
+		    if (item->type() == Node::Type)
+		    {
+			Node * node = qgraphicsitem_cast<Node *>(item);
+			node->setPos(node->pos() - center);
+		    }
+		}
+		freestyleGraph->setPos(center);
 	    }
 	}
     }
