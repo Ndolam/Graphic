@@ -2,7 +2,7 @@
  * File:	graph.h
  * Author:	Rachel Bood
  * Date:	2014 or 2015?
- * Version:	1.7
+ * Version:	1.8
  *
  * Purpose:	Define the graph class.
  *
@@ -29,6 +29,8 @@
  *  (a) Removed rotation as a graph attribute.
  * Nov 14, 2020 (JD V1.7)
  *  (a) Added the third arg to boundingBox().
+ * Nov 16, 2020 (JD V1.8)
+ *  (a) Added centerGraph() function.
  */
 
 #ifndef GRAPH_H
@@ -67,6 +69,7 @@ class Graph : public QGraphicsObject
     qreal getRotation();
     QGraphicsItem * getRootParent();
     QRectF boundingBox(QPointF * center, bool useNodeSizes, QPointF * RGcenter);
+    void centerGraph();
 
   protected:
     void mouseReleaseEvent(QGraphicsSceneMouseEvent * event);

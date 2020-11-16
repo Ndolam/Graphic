@@ -2,7 +2,7 @@
  * File:    graph.cpp
  * Author:  Rachel Bood
  * Date:    2014/11/07 (?)
- * Version: 1.10
+ * Version: 1.11
  *
  * Purpose:
  *
@@ -52,9 +52,17 @@
  *	in two places).  Modified code accordingly.
  * Nov 14, 2020 (JD V1.10)
  *  (a) Add a third arg to boundingBox() which can be used to return
- *	the geographic center of the nodes in the graph coordinate system.
+ *	the geometric center of the nodes in the graph coordinate system.
  *  (b) Fix bug in boundingBox() which didn't deal with the first node
  *	correctly.
+ * Nov 16, 2020 (JD V1.11)
+ *  (a) Add centerGraph(), which adjusts the graph so that the center
+ *	of the graph is at the geometric center of the node centers.
+ *	This is useful (particularly for joined graphs and freestyle
+ *	graphs, but even for some basicgraphs) so that when the graph
+ *	is rotated via the Edit Canvas Graph tab it appears to rotate
+ *	around its center, rather than orbiting around some apparently
+ *	arbitrary point on the canvas.
  */
 
 #include "graph.h"
@@ -240,7 +248,7 @@ Graph::boundingBox(QPointF * center, bool useNodeSizes, QPointF * RGcenter)
  *		onto the canvas scene.
  * Arguments:	None.
  * Outputs:	Nothing.
- * Modifies:	int moved
+ * Modifies:	The int moved.
  * Returns:	Nothing.
  * Assumptions: None.
  * Bugs:	None known.
@@ -455,4 +463,49 @@ Graph::getRootParent()
 	parent = parent->parentItem();
 
     return parent;
+}
+
+
+
+/*
+ * Name:	centerGraph()
+ * Purpose:	Adjust the graph (without moving it on the canvas) so
+ *		that its coordinate system is at its geometric center.
+ * Arguments:	None.
+ * Outputs:	Nothing.
+ * Modifies:	The graph.
+ * Returns:	Nothing.
+ * Assumptions:	?
+ * Bugs:	None known.
+ * Notes:	If seems to work on rotated graphs, but this has been
+ *		very lightly tested when the function was initially
+ *		added.
+ */
+
+void
+Graph::centerGraph()
+{
+    QPointF RGcenter; // Relative to the graph's coordinate system
+    QRectF bb = this->boundingBox(nullptr, false, &RGcenter);
+    qDeb() << "G::centerGraph() centering a graph";
+    qDeb() << "     bbox:   " << bb;
+    qDeb() << "     center: " << RGcenter;
+    qDeb() << "     pos:    " << this->pos();
+
+    foreach (QGraphicsItem * item, this->childItems())
+    {
+	if (item->type() == Node::Type)
+	{
+	    Node * node = qgraphicsitem_cast<Node *>(item);
+	    qDeb() << "move node '" << node->getLabel()
+		   << "': " << node->pos()
+		   << " -> " << node->pos() - RGcenter;
+	    node->setPos(node->pos() - RGcenter);
+	}
+    }
+
+    qDeb() << "    moving graph from " << this->pos()
+	   << " to " << this->pos() + RGcenter;
+    this->setPos(this->pos() + RGcenter);
+    update();
 }

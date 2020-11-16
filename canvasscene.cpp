@@ -2,7 +2,7 @@
  * File:    canvasscene.cpp
  * Author:  Rachel Bood
  * Date:    2014/11/07
- * Version: 1.27
+ * Version: 1.28
  *
  * Purpose: Initializes a QGraphicsScene to implement a drag and drop feature.
  *          still very much a WIP
@@ -127,6 +127,12 @@
  *  (a) Removed a now-bogus (due to updates to graph.cpp & node.cpp) comment.
  * Nov 14, 2020 (JD V1.27)
  *  (a) Update calls to Graph::boundingBox() as per change in args.
+ * Nov 16, 2020 (JD V1.28)
+ *  (a) Considerable simplification of 2-node and 4-node join code.
+ *  (b) After a 2-node or 4-node join, call Graph::centerGraph() to
+ *	put the origin of the graph's coordinate system in the
+ *	geometric center of the graph.  This makes rotating the graph
+ *	(via the Edit Canvas Graph tab) work a lot better.
  */
 
 #include "canvasscene.h"
@@ -697,8 +703,6 @@ printGraphInfo(Graph * g, QString title)
  * Bugs:	TODO:
  *		(3) If somehow connectedNode<x> doesn't have a parentItem,
  *		root<n> will be nullptr and eventually dereferenced.
- *              (4) Joining 4 nodes together causes improper rotations
- *              after the two graphs have been assigned to the same parent.
  * Notes:	The four-node join has been a nightmare to get
  *		correct, because of the fact that multiple geometric
  *		transformations have been getting stacked on each
@@ -748,19 +752,19 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 		&& connectNode1b->parentItem() != connectNode2b->parentItem())
 	    {
 		newRoot = new Graph();
-		newRoot->isMoved();
+// needed?	newRoot->isMoved();
 		addItem(newRoot);
 
-		// Given that graphs no longer contain graphs, get the
-		// roots now and get it over with.
 		root1 = qgraphicsitem_cast<Graph *>(connectNode1a->parentItem());
+		QPointF root1Pos = root1->scenePos();
 		root2 = qgraphicsitem_cast<Graph *>(connectNode2a->parentItem());
+		qDeb() << "    root2  WAS at " << root2->pos();
 
-		// Save canvas position of the "non-moving" graph.
-		QPointF g1Center;
-		QRectF g1Location = root1->boundingBox(&g1Center, false,
-						       nullptr);
+		// Move the newRoot to where root1 is found.
+		newRoot->setPos(root1Pos);
 
+		// Moving root2 to "the right place" is a bit a song
+		// and dance.  ***Surely this can be simplified.***
 		QPointF cn1a(connectNode1a->scenePos());
 		QPointF cn1b(connectNode1b->scenePos());
 		QPointF cn2a(connectNode2a->scenePos());
@@ -772,18 +776,12 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 				      cn2b.rx() - cn2a.rx());
 		qreal angle = angle1 - angle2;
 
-		qDeb() << "\tcn1a " << cn1a;
-		qDeb() << "\tcn1b " << cn1b;
-		qDeb() << "\tcn2a " << cn2a;
-		qDeb() << "\tcn2b " << cn2b;
-
+		qDeb() << "\tcn1a " << cn1a; qDeb() << "\tcn1b " << cn1b;
+		qDeb() << "\tcn2a " << cn2a; qDeb() << "\tcn2b " << cn2b;
 		qDebu("\tmidpoint of G1 selected vertices: (%.2f, %.2f)",
-		      (cn1a.rx() + cn1b.rx()) / 2,
-		      (cn1a.ry() + cn1b.ry()) / 2);
+		      (cn1a.rx() + cn1b.rx()) / 2, (cn1a.ry() + cn1b.ry()) / 2);
 		qDebu("\tmidpoint of G2 selected vertices: (%.2f, %.2f)",
-		      (cn2a.rx() + cn2b.rx()) / 2,
-		      (cn2a.ry() + cn2b.ry()) / 2);
-
+		      (cn2a.rx() + cn2b.rx()) / 2, (cn2a.ry() + cn2b.ry()) / 2);
 		qDeb() << "\tangle G1 = " << qRadiansToDegrees(angle1);
 		qDeb() << "\tangle G2 = " << qRadiansToDegrees(angle2);
 		qDeb() << "\tdelta angle = " << qRadiansToDegrees(angle);
@@ -791,17 +789,8 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 		// Rotate the second graph by the calculated angle.
 		root2->setRotation(qRadiansToDegrees(angle), true);
 
-#ifdef DO_ASYMMETRICAL_JOIN
-		// The following calculates the offset to move cn2a to cn1a.
-		// This is the code which was used for a long time.
-		// It not preserve the symmetry of G2.
-		qreal deltaX = connectNode1a->scenePos().rx()
-		    - connectNode2a->scenePos().rx();
-		qreal deltaY = connectNode1a->scenePos().ry()
-		    - connectNode2a->scenePos().ry();
-#else
-		// The above destroys symmetry of G2.
-		// Instead, calculate the offset that moves the middle
+		// To preserve as much symmetry as possible (?),
+		// calculate the offset that moves the middle
 		// of edge (cn2a, cn2b) to the middle of edge (cn1a, cn1b)
 		// Note that cn2a and cn2b have moved since the rotation!
 		cn2a = connectNode2a->scenePos();
@@ -815,14 +804,9 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 		qDebu("\tmidcn1X = %.1f, midcn2X= %.1f", midcn1X, midcn2X);
 		qDebu("\tmidcn1Y = %.1f, midcn2Y= %.1f", midcn1Y, midcn2Y);
 		qDebu("\tdeltaX = %.1f, deltaY = %.1f", deltaX, deltaY);
-#endif
 		root2->moveBy(deltaX, deltaY);
 
-		// Save canvas position of the second graph AFTER
-		// rotating and translating it (see usage below).
-		QRectF g2Location = root2->boundingBox(nullptr, false, nullptr);
-
-		// Set connectNode2a edges to connectNode1a edges
+		// Attached connectNode2a edges to connectNode1a
 		foreach (Edge * edge, connectNode2a->edges())
 		{
 		    if (edge->sourceNode() == connectNode2a)
@@ -832,7 +816,7 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 		    connectNode1a->addEdge(edge);
 		}
 
-		// Set connectNode2b edges to connectNode1b edges
+		// Attach connectNode2b edges to connectNode1b
 		foreach (Edge * edge, connectNode2b->edges())
 		{
 		    if (edge->sourceNode() == connectNode2b)
@@ -866,79 +850,51 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 		    }
 		}
 
+		// Move all nodes from root1 to newroot.
+		// If the rotation of root1 was 0, we could just use
+		// each node's pos(), since the roots are at the same place.
+		// However, since root1 might have been rotated, we
+		// need to map the scene coords.
+		foreach (QGraphicsItem * item, root1->childItems())
+		{
+		    itemPos = item->scenePos();
+		    item->setParentItem(newRoot);
+		    item->setPos(itemPos - root1Pos);
+		    item->setRotation(0);
+		}
+
+		// Move all nodes from root2 to newRoot.
+		foreach (QGraphicsItem * item, root2->childItems())
+		{
+		    itemPos = item->scenePos();
+		    item->setParentItem(newRoot);
+		    item->setPos(itemPos - root1Pos);
+		    item->setRotation(0);
+		}
+
 		// This block renumbers all the nodes in the new graph
 		// iff the first node selected had a numeric label.
+		// See comments in the corresponding block for 2-node
+		// join below.
 		bool isInt;
 		connectNode1a->getLabel().toInt(&isInt);
 		if (isInt)
 		{
 		    int count = 0;
 
-		    QList<QGraphicsItem *> list;
-		    foreach (QGraphicsItem * gItem, root1->childItems())
-			if (gItem->type() == Node::Type)
-			    list.append(gItem);
-
-		    foreach (QGraphicsItem * gItem, root2->childItems())
-			if (gItem->type() == Node::Type)
-			    list.append(gItem);
-
-		    while (!list.isEmpty())
-		    {
-			foreach (QGraphicsItem * i, list)
-			{
-			    if (i != connectNode2a
-				&& i != connectNode2b)
+		    foreach (QGraphicsItem * item, newRoot->childItems())
+			if (item->type() == Node::Type
+			    && item != connectNode2a && item != connectNode2b)
 			    {
-				Node * node = qgraphicsitem_cast<Node*>(i);
-				node->setNodeLabel(count);
-				count++;
+				Node * node = qgraphicsitem_cast<Node*>(item);
+				node->setNodeLabel(count++);
 			    }
-			    list.removeOne(i);
-			}
-		    }
 		}
 
-		// Find the center of all the nodes using g1Location
-		// and g2Location.
-		qreal minx = g1Location.left() < g2Location.left()
-		    ? g1Location.left() : g2Location.left();
-		qreal maxx = g1Location.right() > g2Location.right()
-		    ? g1Location.right() : g2Location.right();
-		qreal miny = g1Location.bottom() < g2Location.bottom()
-		    ? g1Location.bottom() : g2Location.bottom();
-		qreal maxy = g1Location.top() > g2Location.top()
-		    ? g1Location.top() : g2Location.top();
-		qreal midx = (maxx + minx) / 2.;
-		qreal midy = (maxy + miny) / 2.;
-		QPointF mid = QPointF(midx, midy);
-
-		// Move all nodes from root1 to newroot
-		foreach (QGraphicsItem * item, root1->childItems())
-		{
-		    itemPos = item->scenePos(); // MUST BE scenePos(), NOT pos()
-		    item->setParentItem(newRoot);
-		    item->setPos(itemPos - mid);
-		    item->setRotation(0);
-		}
-
-		// Having moved all the nodes from root1 to newRoot,
-		// move newRoot to where root1 is, so that the nodes
-		// and edges of root1 will stay the same place on the screen.
-		newRoot->setPos(g1Center);
-		// That is part way to the solution, but we need to
-		// add in this offset as well.  GOK why.
-		newRoot->setPos(newRoot->pos()
-				- newRoot->boundingRect().center());
-
-		// Move all nodes from root2 to newroot
-		foreach (QGraphicsItem * item, root2->childItems())
-		{
-		    itemPos = item->scenePos(); // MUST BE scenePos(), NOT pos()
-		    item->setParentItem(newRoot);
-		    item->setPos(itemPos - mid);
-		    item->setRotation(0);
-		}
+		// Adjust the joined graph so that its center of
+		// rotation is at the geometric center of the nodes,
+		// in case the user rotates this graph.
+		newRoot->centerGraph();
 
 		canvasGraphList.append(newRoot);
 
@@ -977,30 +933,18 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 	    if (connectNode1a->parentItem() != connectNode2a->parentItem())
 	    {
 		newRoot = new Graph();
-		newRoot->isMoved();
+// needed?	newRoot->isMoved();
 		addItem(newRoot);
 
 		root1 = qgraphicsitem_cast<Graph *>(connectNode1a->parentItem());
+		QPointF root1Pos = root1->scenePos();
 		root2 = qgraphicsitem_cast<Graph *>(connectNode2a->parentItem());
 
-		// Save canvas position of the "non-moving" graph.
-		QPointF g1Center;
-		QRectF g1Location = root1->boundingBox(&g1Center, false,
-						       nullptr);
-
-		QPointF p1(connectNode1a->scenePos());
-		QPointF p2(connectNode2a->scenePos());
-
-		qreal deltaX = p1.rx() - p2.rx();
-		qreal deltaY = p1.ry() - p2.ry();
-
-		root2->moveBy(deltaX, deltaY);
-		qDeb() << "\tmoving n2 by (" << deltaX << ", "
-			   << deltaY << ")";
-
-		// Save canvas position of the second graph AFTER
-		// translating it (see usage below).
-		QRectF g2Location = root2->boundingBox(nullptr, false, nullptr);
+		// Move the newRoot to root1.
+		newRoot->setPos(root1Pos);
+		// Move root2 so that the two selected nodes are coincident.
+		root2->setPos(root2->scenePos() + connectNode1a->scenePos()
+			      - connectNode2a->scenePos());
 
 		foreach (Edge * edge, connectNode2a->edges())
 		{
@@ -1018,82 +962,53 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 		    connectNode1a->setZValue(3);    // TODO: archaic?
 		}
 
+		// Move all nodes from root1 to newRoot.
+		// If the rotation of root1 was 0, we could just use
+		// each node's pos(), since the roots are at the same place.
+		// However, since root1 might have been rotated, we
+		// need to map the scene coords.
+		foreach (QGraphicsItem * item, root1->childItems())
+		{
+		    itemPos = item->scenePos();
+		    item->setParentItem(newRoot);
+		    item->setPos(itemPos - root1Pos);
+		    item->setRotation(0);
+		}
+
+		// Move all nodes from root2 to newRoot.
+		foreach (QGraphicsItem * item, root2->childItems())
+		{
+		    itemPos = item->scenePos();
+		    item->setParentItem(newRoot);
+		    item->setPos(itemPos - root1Pos);
+		    item->setRotation(0);
+		}
+
 		// If n1 has a numeric label, renumber all the nodes from
 		// 0 on up.
 		// TODO: something intelligent when n1's label is of the form
 		//		<letter>{^<anything>}_<number>
+		// Alternatively, since this functionality is now
+		// available from the Edit Canvas Graph tab, it could go.
 		bool isInt;
 		connectNode1a->getLabel().toInt(&isInt);
 		if (isInt)
 		{
 		    int count = 0;
 
-		    QList<QGraphicsItem *> list;
-		    foreach (QGraphicsItem * gItem, root1->childItems())
-			if (gItem->type() == Node::Type)
-			    list.append(gItem);
-
-		    foreach (QGraphicsItem * gItem, root2->childItems())
-			if (gItem->type() == Node::Type)
-			    list.append(gItem);
-
-		    while (!list.isEmpty())
-		    {
-			foreach (QGraphicsItem * i, list)
+		    foreach (QGraphicsItem * item, newRoot->childItems())
+			if (item->type() == Node::Type
+			    && item != connectNode2a)
 			{
-			    if (i->type() == Graph::Type)
-				list.append(i->childItems());
-			    else if (i != connectNode2a)
-			    {
-				Node * node = qgraphicsitem_cast<Node*>(i);
-				node->setNodeLabel(count);
-				count++;
-			    }
-			    list.removeOne(i);
+			    Node * node = qgraphicsitem_cast<Node*>(item);
+			    node->setNodeLabel(count++);
 			}
-		    }
 		}
-
-		// Find the center of all the nodes using g1Location
-		// and g2Location.
-		qreal minx = g1Location.left() < g2Location.left()
-		    ? g1Location.left() : g2Location.left();
-		qreal maxx = g1Location.right() > g2Location.right()
-		    ? g1Location.right() : g2Location.right();
-		qreal miny = g1Location.bottom() < g2Location.bottom()
-		    ? g1Location.bottom() : g2Location.bottom();
-		qreal maxy = g1Location.top() > g2Location.top()
-		    ? g1Location.top() : g2Location.top();
-		qreal midx = (maxx + minx) / 2.;
-		qreal midy = (maxy + miny) / 2.;
-		QPointF mid = QPointF(midx, midy);
-
-		// Move all nodes from root1 to newroot
-		foreach (QGraphicsItem * item, root1->childItems())
-		{
-		    itemPos = item->scenePos(); // MUST BE scenePos(), NOT pos()
-		    item->setParentItem(newRoot);
-		    item->setPos(itemPos - mid);
-		    item->setRotation(0);
-		}
-
-		// Having moved all the nodes from root1 to newRoot,
-		// move newRoot to where root1 is, so that the nodes
-		// and edges of root1 will stay the same place on the screen.
-		newRoot->setPos(g1Center);
-		// That is part way to the solution, but we need to
-		// add in this offset as well.  GOK why.
-		newRoot->setPos(newRoot->pos()
-				- newRoot->boundingRect().center());
-
-		// Move all nodes from root2 to newroot
-		foreach (QGraphicsItem * item, root2->childItems())
-		{
-		    itemPos = item->scenePos(); // MUST BE scenePos(), NOT pos()
-		    item->setParentItem(newRoot);
-		    item->setPos(itemPos - mid);
-		    item->setRotation(0);
-		}
+		
+		// Adjust the joined graph so that its center of
+		// rotation is at the geometric center of the nodes,
+		// in case the user rotates this graph.
+		newRoot->centerGraph();
 
 		canvasGraphList.append(newRoot);
 

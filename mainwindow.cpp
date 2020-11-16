@@ -2,7 +2,7 @@
  * File:	mainwindow.cpp
  * Author:	Rachel Bood
  * Date:	January 25, 2015.
- * Version:	1.67
+ * Version:	1.68
  *
  * Purpose:	Implement the main window and functions called from there.
  *
@@ -452,6 +452,9 @@
  *	change when one is modified, (ii) joined and freestyle
  *	graphs scale properly.
  *  (i) Improve some comments.
+ * Nov 16, 2020 (JD V1.68)
+ *  (a) Remove a now-bogus comment that was misleading enough to
+ *	deserve a commit.
  */
 
 #include "mainwindow.h"
@@ -2536,12 +2539,6 @@ MainWindow::style_Canvas_Graph(enum canvas_widget_ID what_changed,
 
 	    GUARD(cGraphRotation_WGT)
 	    {
-		// Origin of freestyle graphs is not in the middle of
-		// the graph, which means rotation also orbits around
-		// some "random" place.
-		// TODO: either do a translate before and after this
-		// rotation, or fix freestyle graphs so that their
-		// origin is in the middle of the points.
 		qreal netRotation = rotation - previousRotation;
 		graph->setRotation(-1 * netRotation, true);
 	    }
