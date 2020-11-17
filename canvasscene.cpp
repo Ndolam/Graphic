@@ -2,7 +2,7 @@
  * File:    canvasscene.cpp
  * Author:  Rachel Bood
  * Date:    2014/11/07
- * Version: 1.28
+ * Version: 1.29
  *
  * Purpose: Initializes a QGraphicsScene to implement a drag and drop feature.
  *          still very much a WIP
@@ -133,6 +133,9 @@
  *	put the origin of the graph's coordinate system in the
  *	geometric center of the graph.  This makes rotating the graph
  *	(via the Edit Canvas Graph tab) work a lot better.
+ * Nov 16, 2020 (JD V1.29)
+ *  (a) Animate the moving of the second graph for joins.  Without this,
+ *	the joining can be very jarring, especially for the 4-node join.
  */
 
 #include "canvasscene.h"
@@ -152,6 +155,7 @@
 #include <QPainter>
 #include <QtCore>
 #include <QtGui>
+#include <QThread>
 
 // If the default resolution (DPI) is >= this value, draw each grid
 // dot as a 2x2 block instead of a single pixel.
@@ -721,10 +725,12 @@ printGraphInfo(Graph * g, QString title)
  *		Having done this, the center of rotation was off in
  *		some "random" location, so the V1.25 changes here put
  *		the center of rotation within the graph.
- *		TODO: get the center of rotation to be not merely
- *		within the joined graph, but at its geographic
- *		center.
  */
+
+// Constants for the join animations.
+// Without animations the join operation can be jarring and confusing.
+#define ANIMATION_STEPS 10  // Pulled out of thin air
+#define ANIMATION_DELAY	70  // Ditto
 
 void
 CanvasScene::keyReleaseEvent(QKeyEvent * event)
@@ -787,7 +793,13 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 		qDeb() << "\tdelta angle = " << qRadiansToDegrees(angle);
 
 		// Rotate the second graph by the calculated angle.
-		root2->setRotation(qRadiansToDegrees(angle), true);
+		qreal animate_angle = angle / ANIMATION_STEPS;
+		for (int i = 0; i < ANIMATION_STEPS; i++)
+		{
+		    root2->setRotation(qRadiansToDegrees(animate_angle), true);
+		    QCoreApplication::processEvents(QEventLoop::AllEvents);
+		    QThread::msleep(ANIMATION_DELAY);
+		}
 
 		// To preserve as much symmetry as possible (?),
 		// calculate the offset that moves the middle
@@ -804,7 +816,14 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 		qDebu("\tmidcn1X = %.1f, midcn2X= %.1f", midcn1X, midcn2X);
 		qDebu("\tmidcn1Y = %.1f, midcn2Y= %.1f", midcn1Y, midcn2Y);
 		qDebu("\tdeltaX = %.1f, deltaY = %.1f", deltaX, deltaY);
-		root2->moveBy(deltaX, deltaY);
+		qreal animate_x = deltaX / ANIMATION_STEPS;
+		qreal animate_y = deltaY / ANIMATION_STEPS;
+		for (int i = 0; i < ANIMATION_STEPS; i++)
+		{
+		    root2->moveBy(animate_x, animate_y);
+		    QCoreApplication::processEvents(QEventLoop::AllEvents);
+		    QThread::msleep(ANIMATION_DELAY);
+		}
 
 		// Attached connectNode2a edges to connectNode1a
 		foreach (Edge * edge, connectNode2a->edges())
@@ -885,10 +904,10 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 		    foreach (QGraphicsItem * item, newRoot->childItems())
 			if (item->type() == Node::Type
 			    && item != connectNode2a && item != connectNode2b)
-			    {
-				Node * node = qgraphicsitem_cast<Node*>(item);
-				node->setNodeLabel(count++);
-			    }
+			{
+			    Node * node = qgraphicsitem_cast<Node*>(item);
+			    node->setNodeLabel(count++);
+			}
 		}
 
 		// Adjust the joined graph so that its center of
@@ -940,11 +959,22 @@ CanvasScene::keyReleaseEvent(QKeyEvent * event)
 		QPointF root1Pos = root1->scenePos();
 		root2 = qgraphicsitem_cast<Graph *>(connectNode2a->parentItem());
 
-		// Move the newRoot to root1.
+		// Move the newRoot to root1's location.
 		newRoot->setPos(root1Pos);
+
 		// Move root2 so that the two selected nodes are coincident.
-		root2->setPos(root2->scenePos() + connectNode1a->scenePos()
-			      - connectNode2a->scenePos());
+		qreal animate_x = (connectNode1a->scenePos()
+				    - connectNode2a->scenePos()).x()
+		    / ANIMATION_STEPS;
+		qreal animate_y = (connectNode1a->scenePos()
+				    - connectNode2a->scenePos()).y()
+		    / ANIMATION_STEPS;
+		for (int i = 0; i < ANIMATION_STEPS; i++)
+		{
+		    root2->moveBy(animate_x, animate_y);
+		    QCoreApplication::processEvents(QEventLoop::AllEvents);
+		    QThread::msleep(ANIMATION_DELAY);
+		}
 
 		foreach (Edge * edge, connectNode2a->edges())
 		{
