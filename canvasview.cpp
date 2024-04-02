@@ -652,8 +652,8 @@ CanvasView::mousePressEvent(QMouseEvent * event) // Should this be in CS?
 	    }
 	    selectionBand->setGeometry(QRect(origin, QSize()).normalized());
 	    selectionBand->show();
-	    break;
 	}
+	break;
 
       default:
 	if (node1 != nullptr)

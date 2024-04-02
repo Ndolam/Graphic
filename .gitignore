@@ -1,13 +1,14 @@
 *.[oa]
 *~
 .emacs_zsd
-.gitignore.swp
 .qmake.stash
 Graphic*
 Makefile*
 TODO
 commit
 dpi-schlmozzle
+fonts/cmmi10.ttf
+fonts/cmsy10.ttf
 fonts/cmzsd10.sfd
 graph-ic
 j-stash

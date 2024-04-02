@@ -64,8 +64,8 @@ class BasicGraphs
 
     // This must agree with Graph_Type_Name set in the BG constructor.
     enum Graph_Type {Nothing = 0, Antiprism, BBTree, Bipartite, Circulant,
-                     Complete, Crown, Cycle, Dutch_Windmill, Gear, Grid,
-                     Helm, Path, Petersen, Prism, Star, Wheel, Count};
+		     Complete, Crown, Cycle, Dutch_Windmill, Gear, Grid,
+		     Helm, Path, Petersen, Prism, Star, Wheel, Count};
     static QString getGraphName(int enumValue);
 
   private:

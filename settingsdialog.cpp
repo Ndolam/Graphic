@@ -36,8 +36,6 @@
  *	customDpiButton for clarity.
  */
 
-#define DEBUG
-
 #include "settingsdialog.h"
 #include "ui_settingsdialog.h"
 #include "defuns.h"
