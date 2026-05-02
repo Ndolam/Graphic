@@ -2,7 +2,7 @@
  * File:	file-io.cpp
  * Author:	Jim Diamond
  * Date:	2020-10-22
- * Version:	1.1
+ * Version:	1.2
  *
  * Purpose:	Implement the functions which read .grphc files and
  *		the functions which write files	graph files (text or
@@ -33,6 +33,11 @@
  * Oct 29, 2020 (JD V1.1)
  *  (a) Do not clear the promptSave (i.e., the graph has not been
  *	saved) flag for output file types other than .grphc.
+ * May 2, 2026 (JD V1.2)
+ *  (a) Rather than always outputting LaTeX code, output plain TeX (more or
+ *      less), LaTeX or ConTeXt code according to the chosen setting.
+ *	The plain TeX code output compiles, but font size changes are not
+ *	honoured, unless the user supplies his own \fontsize macro.
  */
 
 #include <QDate>
@@ -70,9 +75,12 @@ static QString fileDirectory;
 
 /*
  * Name:	saveTikZ()
- * Purpose:	Save the current graph as a (LaTeX) TikZ file.
+ * Purpose:	Save the current graph as a TikZ file.
+ *		The (TikZ) settings are polled to see whether to output
+ *		in plain TeX format, ConTeXt format or LaTeX format.
  * Arguments:	A file pointer to write to and the node list.
- * Outputs:	A TikZ picture (in LaTeX syntax) which draws the graph.
+ * Outputs:	A TikZ picture which draws the graph (plain TeX font.
+ * *		size changes not yet implemented here).
  * Modifies:	Nothing.
  * Returns:	True on success.
  * Assumptions: Args are valid.
@@ -95,6 +103,17 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
     nodeInfo nodeDefaults;
     edgeInfo edgeDefaults;
 
+    bool use_plainTeX = true;	    // Assume LaTeX if neither of
+    bool use_ConTeXt = false;	    // these are true.
+    if (settings.contains("TikZFormat"))
+    {
+	use_plainTeX = false;
+        if (settings.value("TikZFormat").toString() == "ConTeXt")
+	    use_ConTeXt = true;
+	else if (settings.value("TikZFormat").toString() == "plainTeX")
+	    use_plainTeX = true;
+    }
+
     // It seems (Qt5.15.1, anyway) that a QHash can't use a QColor as
     // a key.  Go figure.  So store the .name() of the colour.  Note
     // that .name() without a format specification doesn't get the
@@ -103,7 +122,26 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
     QHash<QString, QString> unnamedColours;
 
     // Output the boilerplate TikZ picture code:
-    outfile << "\\begin{tikzpicture}[x=1in, y=1in, xscale=1, yscale=1,\n";
+    if (use_plainTeX)
+    {
+	outfile << "% NOTE: you may need to adjust font sizes yourself\n";
+	outfile << "% or define your own \\fontsize...\\selectfont macro\n";
+	outfile << "% to do what you want.\n";
+	outfile << "\\def\\fontsize#1\\selectfont{\\rm}\n";
+	outfile << "\\ifdefined\\tikzpicture\\else\\input tikz \\fi\n";
+	outfile << "\\tikzpicture";
+    }
+    else if (use_ConTeXt)
+    {
+	outfile << "\\usemodule[tikz]\n";
+	outfile << "\\starttikzpicture";
+    }
+    else
+    {
+	outfile << "% NOTE! \\usepackage{tikz} is needed in preamble!\n";
+	outfile << "\\begin{tikzpicture}";
+    }
+    outfile << "[x=1in, y=1in, xscale=1, yscale=1,\n";
 
     // Find and output the default node and edge details:
     findDefaults(nodes, &nodeDefaults, &edgeDefaults);
@@ -114,7 +152,7 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
     // Q: why did Rachel output in RGB, as opposed to rgb?
     // Note: drawings may need to be tweaked by hand if they are to be
     //	     printed, due to the RGB/rgb <-> cmyk conversion nightmare.
-    // Note: TikZ for plain TeX does not support the cmyk colourspace
+    // Note: in 2019 TikZ for plain TeX did not support the cmyk colourspace
     //	     nor (before JD's addition) the RGB colourspace.
     bool defineDefNodeFillColour;
     QColor defNodeFillColour
@@ -147,10 +185,18 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
     }
 
     outfile << "\tminimum size=" << nodeDefaults.nodeDiameter << "in, "
-	    << "inner sep=0, "
-	    << "font=\\fontsize{" << nodeDefaults.labelSize
-	    << "}{1}\\selectfont,\n"
-	    << "\tline width="
+	    << "inner sep=0, ";
+    if (use_ConTeXt)
+    {
+	outfile << "font={\\switchtobodyfont[" << nodeDefaults.labelSize
+		<< "pt]},\n";
+    }
+    else
+    {
+	outfile << "font=\\fontsize{" << nodeDefaults.labelSize
+		<< "}{1}\\selectfont,\n";
+    }
+    outfile << "\tline width="
 	    << QString::number(nodeDefaults.penSize / currentPhysicalDPI_X,
 			       'f', VT_PREC_TIKZ) << "in},\n";
 
@@ -177,35 +223,84 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 
     outfile << ", line width="
 	    << QString::number(edgeDefaults.penSize / currentPhysicalDPI_X,
-			       'f', ET_PREC_TIKZ) << "in},\n"
-	    << "    l/.style={font=\\fontsize{" << edgeDefaults.labelSize
-	    << "}{1}\\selectfont}]\n";
+			       'f', ET_PREC_TIKZ) << "in},\n";
+
+    if (use_ConTeXt)
+    {
+	outfile << "    l/.style={font={\\switchtobodyfont["
+		<< edgeDefaults.labelSize << "pt]}}]\n";
+    }
+    else
+    {
+	outfile << "    l/.style={font=\\fontsize{" << edgeDefaults.labelSize
+		<< "}{1}\\selectfont}]\n";
+    }
 
     // We have now finished the generic style.
     // Output default colours, if needed.
+    // For ConTeXt, we could also use hex style x=RRGGBB instead of rgb.
     if (defineDefNodeFillColour)
     {
-	outfile << "\\definecolor{defNodeFillColour} {RGB} {"
-		<< QString::number(defNodeFillColour.red())
-		<< "," << QString::number(defNodeFillColour.green())
-		<< "," << QString::number(defNodeFillColour.blue())
-		<< "}\n";
+	if (use_ConTeXt)
+	{
+	    outfile << "\\definecolor[defNodeFillColour][r="
+		    << QString::number(defNodeFillColour.red() / 255.0)
+		    << ", g="
+		    << QString::number(defNodeFillColour.green() / 255.0)
+		    << ", b="
+		    << QString::number(defNodeFillColour.blue() / 255.0)
+		    << "]\n";
+	}
+	else
+	{
+	    outfile << "\\definecolor{defNodeFillColour} {RGB} {"
+		    << QString::number(defNodeFillColour.red())
+		    << "," << QString::number(defNodeFillColour.green())
+		    << "," << QString::number(defNodeFillColour.blue())
+		    << "}\n";
+	}
     }
     if (defineDefNodeLineColour)
     {
-	outfile << "\\definecolor{defNodeLineColour} {RGB} {"
-		<< QString::number(defNodeLineColour.red())
-		<< "," << QString::number(defNodeLineColour.green())
-		<< "," << QString::number(defNodeLineColour.blue())
-		<< "}\n";
+	if (use_ConTeXt)
+	{
+	    outfile << "\\definecolor[defNodeLineColour][r="
+		    << QString::number(defNodeLineColour.red() / 255.0)
+		    << ", g="
+		    << QString::number(defNodeLineColour.green() / 255.0)
+		    << ", b="
+		    << QString::number(defNodeLineColour.blue() / 255.0)
+		    << "]\n";
+	}
+	else
+	{
+	    outfile << "\\definecolor{defNodeLineColour} {RGB} {"
+		    << QString::number(defNodeLineColour.red())
+		    << "," << QString::number(defNodeLineColour.green())
+		    << "," << QString::number(defNodeLineColour.blue())
+		    << "}\n";
+	}
     }
     if (defineDefEdgeLineColour)
     {
-	outfile << "\\definecolor{defEdgeLineColour} {RGB} {"
-		<< QString::number(defEdgeLineColour.red())
-		<< "," << QString::number(defEdgeLineColour.green())
-		<< "," << QString::number(defEdgeLineColour.blue())
-		<< "}\n";
+	if (use_ConTeXt)
+	{
+	    outfile << "\\definecolor[defEdgeLineColour][r="
+		    << QString::number(defEdgeLineColour.red() / 255.0)
+		    << ", g="
+		    << QString::number(defEdgeLineColour.green() / 255.0)
+		    << ", b="
+		    << QString::number(defEdgeLineColour.blue() / 255.0)
+		    << "]\n";
+	}
+	else
+	{
+	    outfile << "\\definecolor{defEdgeLineColour} {RGB} {"
+		    << QString::number(defEdgeLineColour.red())
+		    << "," << QString::number(defEdgeLineColour.green())
+		    << "," << QString::number(defEdgeLineColour.blue())
+		    << "}\n";
+	}
     }
 
     QString edgeStyles = "";
@@ -353,9 +448,18 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 		    outfile << ",\n\t";
 		else
 		    outfile << ", ";
-		outfile << "font=\\fontsize{"
-			<< QString::number(node->getLabelSize()) // Font size
-			<< "}{1}\\selectfont";
+		if (use_ConTeXt)
+		{
+		    outfile << "font={\\switchtobodyfont["
+			    << QString::number(node->getLabelSize()) // Font size
+			    << "pt]}";
+		}
+		else
+		{
+		    outfile << "font=\\fontsize{"
+			    << QString::number(node->getLabelSize()) // Font size
+			    << "}{1}\\selectfont";
+		}
 	    }
 
 	    QString thisLabel = node->getLabel();
@@ -372,8 +476,10 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 	    outfile << "] {$$};\n";
     }
 
-    // Sample output for an edge:
+    // Sample output for an edge (plain, LaTeX):
     //	\definecolor{e<n>_<m>lineClr} {RGB} {R,G,B}   (if not default)
+    // ConTeXt:
+    //	\definecolor[e<n>_<m>lineClr][r=R/255, ...]   (if not default)
     //	\path (v<n>) edge[e, diff from defaults] node[l, diff from defaults]
     //		{$<edge label>} (v_<m>);
     for (int i = 0; i < nodes.count(); i++)
@@ -399,9 +505,10 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 		QString lineColour = "";
 		if (edge->getColour() != defEdgeLineColour)
 		{
+		    QColor edge_colour = edge->getColour();
 		    qDebu("E %d,%d: colour non-default", sourceID, destID);
-		    lineColour = lookupColour(edge->getColour());
-		    QString qtname = edge->getColour().name();
+		    lineColour = lookupColour(edge_colour);
+		    QString qtname = edge_colour.name();
 		    if (lineColour == nullptr)
 		    {
 			if (unnamedColours.contains(qtname))
@@ -414,18 +521,32 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 		    }
 		    if (lineColour == nullptr)
 		    {
-			qDeb() << "\tdid not find " << edge->getColour()
+			qDeb() << "\tdid not find " << edge_colour
 			       << ";\n\t\tadding it to hash as " << qtname;
 			lineColour = "e" + QString::number(sourceID) + "_"
 			    + QString::number(destID) + "lineClr";
 			unnamedColours[qtname] = lineColour;
-			outfile << "\\definecolor{" << lineColour << "}{RGB}{"
-				<< QString::number(edge->getColour().red())
-				<< ","
-				<< QString::number(edge->getColour().green())
-				<< ","
-				<< QString::number(edge->getColour().blue())
-				<< "}\n";
+			if (use_ConTeXt)
+			{
+			    outfile << "\\definecolor[" << lineColour << "][r="
+				    << QString::number(edge_colour.red() / 255.)
+				    << ", g="
+				    << QString::number(edge_colour.green() / 255.)
+				    << ", b="
+				    << QString::number(edge_colour.blue() / 255.)
+				<< "]\n";
+			}
+			else
+			{
+			    outfile << "\\definecolor{"
+				    << lineColour << "}{RGB}{"
+				    << QString::number(edge_colour.red())
+				    << ","
+				    << QString::number(edge_colour.green())
+				    << ","
+				    << QString::number(edge_colour.blue())
+				    << "}\n";
+			}
 		    }
 		    lineColour = ", draw=" + lineColour;
 		    wroteExtra = true;
@@ -461,9 +582,18 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 		{
 		    if (edge->getLabelSize() != edgeDefaults.labelSize)
 		    {
-			outfile << ", font=\\fontsize{"
-				<< QString::number(edge->getLabelSize())
-				<< "}{1}\\selectfont";
+			if (use_ConTeXt)
+			{
+			    outfile << ", font={\\switchtobodyfont["
+				    << QString::number(edge->getLabelSize())
+				    << "pt]}";
+			}
+			else
+			{
+			    outfile << ", font=\\fontsize{"
+				    << QString::number(edge->getLabelSize())
+				    << "}{1}\\selectfont";
+			}
 		    }
 		    outfile << "] {$" << edge->getLabel() << "$}";
 		}
@@ -478,7 +608,12 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 	}
     }
 
-    outfile << "\\end{tikzpicture}\n";
+    if (use_plainTeX)
+	outfile << "\\endtikzpicture\n";
+    else if (use_ConTeXt)
+	outfile << "\\stoptikzpicture\n";
+    else
+	outfile << "\\end{tikzpicture}\n";
 
     return true;
 }
@@ -1078,7 +1213,7 @@ File_IO::inputCustomGraph(bool prependDirPath, QString graphName,
 	    }
 	    continue;
 	}
-	
+
 	if (i < numOfNodes)
 	{
 	    i++;
@@ -1171,10 +1306,10 @@ File_IO::inputCustomGraph(bool prependDirPath, QString graphName,
 		file.close();
 		return;
 	    }
-	    
+
 	    QString l = line.mid(labelPrefixLoc + 3,
 				 line.length() - (labelPrefixLoc + 3) - 1);
-	    
+
 	    qDeb() << "    subs line, " << labelPrefixLoc + 3
 		   << ", " << line.length() - (labelPrefixLoc + 3) - 1
 		   << ") = |" << l << "|";
@@ -1750,7 +1885,7 @@ File_IO::inputCustomGraphOriginal(QString graphFileName, Ui::MainWindow * ui)
     // so they take into account both the node center location and the
     // node diameter.  (These are the two values stored in the .grphc file.)
     qreal minX = 1E10, maxX = -1E10, minY = 1E10, maxY = -1E10;
-    // These 4 variables hold the radii of the vertices which give the 
+    // These 4 variables hold the radii of the vertices which give the
     // extremal positions stored above.
     qreal minXr = 0, maxXr = 0, minYr = 0, maxYr = 0;
     qreal radius_total = 0;

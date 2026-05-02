@@ -2,7 +2,7 @@
  * File:    settingsdialog.cpp
  * Author:  Ian Cathcart
  * Date:    2020/08/05
- * Version: 1.5
+ * Version: 1.6
  *
  * Purpose: Implements the settings dialog.
  *
@@ -34,6 +34,9 @@
  *  (c) Some code tidying; some new function comments.
  *  (d) Rename customSpinBox->customDpiSpinBox and customButton ->
  *	customDpiButton for clarity.
+ * May 1, 2026 (JD V1.6)
+ *  (a) Add code for plain/LaTeX/ConTeXt radio buttons (these specify the
+ *      flavour of TikZ output).
  */
 
 #include "settingsdialog.h"
@@ -107,12 +110,22 @@ SettingsDialog::loadSettings()
     {
 	qDeb() << "... settings contains jpgBgColour = "
 	       << settings.value("jpgBgColour").toString();
-	
+
 	ui->jpgBgColour
 	    ->setStyleSheet("background: "
 			    + settings.value("jpgBgColour").toString()
 			    + "; " + BUTTON_STYLE);
 	ui->jpgBgColour->update();
+    }
+
+    // Default to plain TeX for output format.
+    ui->plainTeXButton->setChecked(true);
+    if (settings.contains("TikZFormat"))
+    {
+	if (settings.value("TikZFormat").toString() == "LaTeX")
+	    ui->LaTeXButton->setChecked(true);
+        else if (settings.value("TikZFormat").toString() == "ConTeXt")
+	    ui->ConTeXtButton->setChecked(true);
     }
 
     setOtherImageButtonStyle();
@@ -126,6 +139,12 @@ SettingsDialog::saveSettings()
     settings.setValue("useDefaultResolution", ui->defaultDpiButton->isChecked());
     settings.setValue("customResolution", ui->customDpiSpinBox->value());
     settings.setValue("gridCellSize", ui->gridCellSize->value());
+    if (ui->plainTeXButton->isChecked())
+	settings.setValue("TikZFormat", "plainTeX");
+    else if (ui->LaTeXButton->isChecked())
+	settings.setValue("TikZFormat", "LaTeX");
+    else
+	settings.setValue("TikZFormat", "ConTeXt");
 
     emit saveDone();
 }
