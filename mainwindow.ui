@@ -4256,7 +4256,7 @@
   </action>
   <action name="actionGraph_settings">
    <property name="text">
-    <string>Graphic settings</string>
+    <string>Graphic settings...</string>
    </property>
    <property name="toolTip">
     <string>Graphic settings</string>
