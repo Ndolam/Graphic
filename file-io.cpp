@@ -2,7 +2,7 @@
  * File:	file-io.cpp
  * Author:	Jim Diamond
  * Date:	2020-10-22
- * Version:	1.2
+ * Version:	1.3
  *
  * Purpose:	Implement the functions which read .grphc files and
  *		the functions which write files	graph files (text or
@@ -38,6 +38,8 @@
  *      less), LaTeX or ConTeXt code according to the chosen setting.
  *	The plain TeX code output compiles, but font size changes are not
  *	honoured, unless the user supplies his own \fontsize macro.
+ * May 3, 2026 (JD V1.3)
+ *  (a) Reformat the TikZ output statements for clarity.
  */
 
 #include <QDate>
@@ -124,22 +126,25 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
     // Output the boilerplate TikZ picture code:
     if (use_plainTeX)
     {
-	outfile << "% NOTE: you may need to adjust font sizes yourself\n";
-	outfile << "% or define your own \\fontsize...\\selectfont macro\n";
-	outfile << "% to do what you want.\n";
-	outfile << "\\def\\fontsize#1\\selectfont{\\rm}\n";
-	outfile << "\\ifdefined\\tikzpicture\\else\\input tikz \\fi\n";
-	outfile << "\\tikzpicture";
+	outfile << "% NOTE: you may need to adjust font sizes yourself\n"
+		<< "% or define your own \\fontsize...\\selectfont macro\n"
+		<< "% to do what you want.\n"
+		<< "\\def\\fontsize#1#2\\selectfont{%\n"
+		<< "    \\message{Changing \\string\\fontsize{#1}{#2}\n"
+	        << "    \\string\\selectfont\\space to \\string\\rm}%\n"
+		<< "    \\rm\n}\n"
+		<< "\\ifdefined\\tikzpicture\\else\\input tikz \\fi\n"
+		<< "\\tikzpicture";
     }
     else if (use_ConTeXt)
     {
-	outfile << "\\usemodule[tikz]\n";
-	outfile << "\\starttikzpicture";
+	outfile << "\\usemodule[tikz]\n"
+		<< "\\starttikzpicture";
     }
     else
     {
-	outfile << "% NOTE! \\usepackage{tikz} is needed in preamble!\n";
-	outfile << "\\begin{tikzpicture}";
+	outfile << "% NOTE! \\usepackage{tikz} is needed in preamble!\n"
+		<< "\\begin{tikzpicture}";
     }
     outfile << "[x=1in, y=1in, xscale=1, yscale=1,\n";
 
@@ -166,7 +171,9 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
     else
     {
 	defineDefNodeFillColour = false;
-	outfile << "	n/.style={fill=" << defNodeFillColourName << ", ";
+	outfile << "	n/.style={fill="
+		<< defNodeFillColourName
+		<< ", ";
     }
 
     bool defineDefNodeLineColour;
@@ -181,19 +188,25 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
     else
     {
 	defineDefNodeLineColour = false;
-	outfile << "draw=" << defNodeLineColourName << ", shape=circle,\n";
+	outfile << "draw="
+		<< defNodeLineColourName
+		<< ", shape=circle,\n";
     }
 
-    outfile << "\tminimum size=" << nodeDefaults.nodeDiameter << "in, "
+    outfile << "\tminimum size="
+	    << nodeDefaults.nodeDiameter
+	    << "in, "
 	    << "inner sep=0, ";
     if (use_ConTeXt)
     {
-	outfile << "font={\\switchtobodyfont[" << nodeDefaults.labelSize
+	outfile << "font={\\switchtobodyfont["
+		<< nodeDefaults.labelSize
 		<< "pt]},\n";
     }
     else
     {
-	outfile << "font=\\fontsize{" << nodeDefaults.labelSize
+	outfile << "font=\\fontsize{"
+		<< nodeDefaults.labelSize
 		<< "}{1}\\selectfont,\n";
     }
     outfile << "\tline width="
@@ -218,7 +231,8 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
     else
     {
 	defineDefEdgeLineColour = false;
-	outfile << "	e/.style={draw=" << defEdgeLineColourName;
+	outfile << "	e/.style={draw="
+		<< defEdgeLineColourName;
     }
 
     outfile << ", line width="
@@ -228,11 +242,13 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
     if (use_ConTeXt)
     {
 	outfile << "    l/.style={font={\\switchtobodyfont["
-		<< edgeDefaults.labelSize << "pt]}}]\n";
+		<< edgeDefaults.labelSize
+		<< "pt]}}]\n";
     }
     else
     {
-	outfile << "    l/.style={font=\\fontsize{" << edgeDefaults.labelSize
+	outfile << "    l/.style={font=\\fontsize{"
+		<< edgeDefaults.labelSize
 		<< "}{1}\\selectfont}]\n";
     }
 
@@ -255,8 +271,10 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 	{
 	    outfile << "\\definecolor{defNodeFillColour} {RGB} {"
 		    << QString::number(defNodeFillColour.red())
-		    << "," << QString::number(defNodeFillColour.green())
-		    << "," << QString::number(defNodeFillColour.blue())
+		    << ","
+		    << QString::number(defNodeFillColour.green())
+		    << ","
+		    << QString::number(defNodeFillColour.blue())
 		    << "}\n";
 	}
     }
@@ -276,8 +294,10 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 	{
 	    outfile << "\\definecolor{defNodeLineColour} {RGB} {"
 		    << QString::number(defNodeLineColour.red())
-		    << "," << QString::number(defNodeLineColour.green())
-		    << "," << QString::number(defNodeLineColour.blue())
+		    << ","
+		    << QString::number(defNodeLineColour.green())
+		    << ","
+		    << QString::number(defNodeLineColour.blue())
 		    << "}\n";
 	}
     }
@@ -297,8 +317,10 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 	{
 	    outfile << "\\definecolor{defEdgeLineColour} {RGB} {"
 		    << QString::number(defEdgeLineColour.red())
-		    << "," << QString::number(defEdgeLineColour.green())
-		    << "," << QString::number(defEdgeLineColour.blue())
+		    << ","
+		    << QString::number(defEdgeLineColour.green())
+		    << ","
+		    << QString::number(defEdgeLineColour.blue())
 		    << "}\n";
 	}
     }
@@ -355,8 +377,10 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 		// Not known to TikZ... have we seen it yet?
 		if (unnamedColours.contains(qtname))
 		{
-		    qDeb() << "\thot diggity... found " << node->getFillColour()
-			   << " == " << qtname;
+		    qDeb() << "\thot diggity... found "
+			   << node->getFillColour()
+			   << " == "
+			   << qtname;
 		    fillColour = unnamedColours.value(qtname);
 		}
 	    }
@@ -365,14 +389,20 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 		// We have not seen this colour before.
 		// \definecolor it for TikZ *and* add it to the hash
 		// of known colour names.
-		qDeb() << "\tdid not find " << node->getFillColour()
-		       << ";\n\t\tadding it to hash as " << qtname;
+		qDeb() << "\tdid not find "
+		       << node->getFillColour()
+		       << ";\n\t\tadding it to hash as "
+		       << qtname;
 		fillColour = "n" + QString::number(i) + "fillClr";
 		unnamedColours[qtname] = fillColour;
-		outfile << "\\definecolor{" << fillColour << "} {RGB} {"
+		outfile << "\\definecolor{"
+			<< fillColour
+			<< "} {RGB} {"
 			<< QString::number(node->getFillColour().red())
-			<< "," << QString::number(node->getFillColour().green())
-			<< "," << QString::number(node->getFillColour().blue())
+			<< ","
+			<< QString::number(node->getFillColour().green())
+			<< ","
+			<< QString::number(node->getFillColour().blue())
 			<< "}\n";
 	    }
 	    // Wrap the fillColour with the TikZ syntax for later consumption:
@@ -389,21 +419,29 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 		// Not known to TikZ... have we seen it yet?
 		if (unnamedColours.contains(qtname))
 		{
-		    qDeb() << "\thot diggity... found " << node->getLineColour()
-			   << " == " << qtname;
+		    qDeb() << "\thot diggity... found "
+			   << node->getLineColour()
+			   << " == "
+			   << qtname;
 		    lineColour = unnamedColours.value(qtname);
 		}
 	    }
 	    if (lineColour == nullptr)
 	    {
-		qDeb() << "\tdid not find " << node->getLineColour()
-		       << ";\n\t\tadding it to hash as " << qtname;
+		qDeb() << "\tdid not find "
+		       << node->getLineColour()
+		       << ";\n\t\tadding it to hash as "
+		       << qtname;
 		lineColour = "n" + QString::number(i) + "lineClr";
 		unnamedColours[qtname] = lineColour;
-		outfile << "\\definecolor{" << lineColour << "}{RGB}{"
+		outfile << "\\definecolor{"
+			<< lineColour
+			<< "}{RGB}{"
 			<< QString::number(node->getLineColour().red())
-			<< "," << QString::number(node->getLineColour().green())
-			<< "," << QString::number(node->getLineColour().blue())
+			<< ","
+			<< QString::number(node->getLineColour().green())
+			<< ","
+			<< QString::number(node->getLineColour().blue())
 			<< "}\n";
 	    }
 	    lineColour = ", draw=" + lineColour;
@@ -411,7 +449,9 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 	}
 
 	// Use (x,y) coordinate system for node positions.
-	outfile << "\\node (v" << QString::number(i) << ") at ("
+	outfile << "\\node (v"
+		<< QString::number(i)
+		<< ") at ("
 		<< QString::number((node->scenePos().rx() - midx)
 				   / currentPhysicalDPI_X,
 				   'f', VP_PREC_TIKZ)
@@ -420,10 +460,12 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 				   / -currentPhysicalDPI_Y,
 				   'f', VP_PREC_TIKZ)
 		<< ") [n";
-	outfile << fillColour << lineColour;
+	outfile << fillColour
+		<< lineColour;
 	if (node->getDiameter() != nodeDefaults.nodeDiameter)
 	{
-	    outfile << ", minimum size=" << QString::number(node->getDiameter())
+	    outfile << ", minimum size="
+		    << QString::number(node->getDiameter())
 		    << "in";
 	    doNewLine = true;
 	}
@@ -468,9 +510,13 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 	    // and there is no (top-level) superscript, we would
 	    // fail to add the "^{}" text.
 	    if (thisLabel.indexOf('^') != -1 || thisLabel.indexOf('_') == -1)
-		outfile << "] {$" << thisLabel << "$};\n";
+		outfile << "] {$"
+			<< thisLabel
+			<< "$};\n";
 	    else
-		outfile << "] {$" << thisLabel << "^{}$};\n";
+		outfile << "] {$"
+			<< thisLabel
+			<< "^{}$};\n";
 	}
 	else
 	    outfile << "] {$$};\n";
@@ -515,31 +561,37 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 			{
 			    qDeb() << "\thot diggity... found "
 				   << edge->getColour()
-				   << " == " << qtname;
+				   << " == "
+				   << qtname;
 			    lineColour = unnamedColours.value(qtname);
 			}
 		    }
 		    if (lineColour == nullptr)
 		    {
-			qDeb() << "\tdid not find " << edge_colour
-			       << ";\n\t\tadding it to hash as " << qtname;
+			qDeb() << "\tdid not find "
+			       << edge_colour
+			       << ";\n\t\tadding it to hash as "
+			       << qtname;
 			lineColour = "e" + QString::number(sourceID) + "_"
 			    + QString::number(destID) + "lineClr";
 			unnamedColours[qtname] = lineColour;
 			if (use_ConTeXt)
 			{
-			    outfile << "\\definecolor[" << lineColour << "][r="
+			    outfile << "\\definecolor["
+				    << lineColour
+				    << "][r="
 				    << QString::number(edge_colour.red() / 255.)
 				    << ", g="
 				    << QString::number(edge_colour.green() / 255.)
 				    << ", b="
 				    << QString::number(edge_colour.blue() / 255.)
-				<< "]\n";
+				    << "]\n";
 			}
 			else
 			{
 			    outfile << "\\definecolor{"
-				    << lineColour << "}{RGB}{"
+				    << lineColour
+				    << "}{RGB}{"
 				    << QString::number(edge_colour.red())
 				    << ","
 				    << QString::number(edge_colour.green())
@@ -556,7 +608,8 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 
 		outfile << "\\path (v"
 			<< QString::number(sourceID)
-			<< ") edge[e" << lineColour;
+			<< ") edge[e"
+			<< lineColour;
 		if (edge->getPenWidth() != edgeDefaults.penSize)
 		{
 		    outfile << ", line width="
@@ -595,7 +648,9 @@ File_IO::saveTikZ(QTextStream &outfile, QVector<Node *> nodes)
 				    << "}{1}\\selectfont";
 			}
 		    }
-		    outfile << "] {$" << edge->getLabel() << "$}";
+		    outfile << "] {$"
+			    << edge->getLabel()
+			    << "$}";
 		}
 		else
 		    outfile << "] {$$}";
@@ -649,11 +704,14 @@ File_IO::saveGraphIc(QTextStream &outfile, QVector<Node *> nodes,
     // of chars printed.
     outfile << "# Version 1 graph-ic graph definition created ";
     QDateTime dateTime = dateTime.currentDateTime();
-    outfile << dateTime.toString("yyyy-MM-dd hh:mm:ss") << "\n";
-    outfile << "# Do NOT edit or delete the above line!" << "\n\n";
+    outfile << dateTime.toString("yyyy-MM-dd hh:mm:ss")
+	    << "\n";
+    outfile << "# Do NOT edit or delete the above line!"
+	    << "\n\n";
 
     outfile << "# The number of nodes in this graph:\n";
-    outfile << nodes.count() << "\n\n";
+    outfile << nodes.count()
+	    << "\n\n";
 
     QString nodeInfo = QString::number(nodes.count()) + "\n\n";
 
@@ -726,7 +784,8 @@ File_IO::saveGraphIc(QTextStream &outfile, QVector<Node *> nodes,
 	    if (outputExtra)
 	    {
 		outfile << "# Looking at n, e = "
-			<< QString::number(n) << ", " << QString::number(e)
+			<< QString::number(n) << ", "
+			<< QString::number(e)
 			<< "  ->  src, dst = "
 			<< QString::number(edge->sourceNode()->getID())
 			<< ", "
@@ -753,14 +812,17 @@ File_IO::saveGraphIc(QTextStream &outfile, QVector<Node *> nodes,
 	    }
 	    if (printThisOne)
 	    {
-		outfile << ", " << QString::number(edge->getDestRadius())
-			<< ", " << QString::number(edge->getSourceRadius())
-			<< ", " << QString::number(edge->getPenWidth()) << ", "
+		outfile << ", "
+			<< QString::number(edge->getDestRadius()) << ", "
+			<< QString::number(edge->getSourceRadius()) << ", "
+			<< QString::number(edge->getPenWidth()) << ", "
 			<< QString::number(edge->getColour().redF()) << ","
 			<< QString::number(edge->getColour().greenF()) << ","
 			<< QString::number(edge->getColour().blueF()) << ", "
-			<< edge->getLabelSize() << ", <"
-			<< edge->getLabel() << ">\n";
+			<< edge->getLabelSize()
+			<< ", <"
+			<< edge->getLabel()
+			<< ">\n";
 	    }
 	}
     }
@@ -856,9 +918,11 @@ File_IO::saveGraph(bool * promptSave, QWidget * parent, Ui::MainWindow * ui)
 	}
 
 	QString extension = selectedFilter.mid(start, end - start);
-	qDeb() << "saveGraph(): computed extension is" << extension;
+	qDeb() << "saveGraph(): computed extension is"
+	       << extension;
 	fileName += extension;
-	qDeb() << "saveGraph(): computed filename is" << fileName;
+	qDeb() << "saveGraph(): computed filename is"
+	       << fileName;
     }
 #endif
 
@@ -1028,8 +1092,10 @@ bool
 File_IO::loadGraphicFile(QWidget * parent, Ui::MainWindow * ui)
 {
     qDeb() << "FI:loadGraphicFile() called; fileDirectory = '"
-	   << fileDirectory << "'; GRAPHiCS_SAVE_FILE is '"
-	   << GRAPHiCS_SAVE_FILE << "'";
+	   << fileDirectory
+	   << "'; GRAPHiCS_SAVE_FILE is '"
+	   << GRAPHiCS_SAVE_FILE
+	   << "'";
 
     QString fileName = QFileDialog::getOpenFileName(parent,
 						    "Load Graph-ics File",
@@ -1113,7 +1179,8 @@ File_IO::inputCustomGraph(bool prependDirPath, QString graphName,
     if (prependDirPath)
 	graphName = fileDirectory + "/" + graphName;
 
-    qDeb() << "FI::inputCustomGraph(): graphName is\n\t" << graphName;
+    qDeb() << "FI::inputCustomGraph(): graphName is\n\t"
+	   << graphName;
 
     QFile file(graphName);
 
@@ -1178,7 +1245,9 @@ File_IO::inputCustomGraph(bool prependDirPath, QString graphName,
     while (!in.atEnd())
     {
 	QString line = in.readLine();
-	qDeb() << "  just read line /" << line << "/";
+	qDeb() << "  just read line /"
+	       << line
+	       << "/";
 	lineNum++;
 	QString simpLine = line.simplified();
 	if (simpLine.isEmpty())
@@ -1207,7 +1276,8 @@ File_IO::inputCustomGraph(bool prependDirPath, QString graphName,
 					 + " has an invalid number of "
 					 "nodes.  Thus I can not read "
 					 "this file.");
-		qDeb() << "  numOfNodes = " << numOfNodes;
+		qDeb() << "  numOfNodes = "
+		       << numOfNodes;
 		file.close();
 		return;
 	    }
@@ -1310,9 +1380,12 @@ File_IO::inputCustomGraph(bool prependDirPath, QString graphName,
 	    QString l = line.mid(labelPrefixLoc + 3,
 				 line.length() - (labelPrefixLoc + 3) - 1);
 
-	    qDeb() << "    subs line, " << labelPrefixLoc + 3
-		   << ", " << line.length() - (labelPrefixLoc + 3) - 1
-		   << ") = |" << l << "|";
+	    qDeb() << "    subs line, "
+		   << labelPrefixLoc + 3 << ", "
+		   << line.length() - (labelPrefixLoc + 3) - 1
+		   << ") = |"
+		   << l
+		   << "|";
 	    node->setNodeLabel(l);
 
 	    nodes.append(node);
@@ -1372,9 +1445,12 @@ File_IO::inputCustomGraph(bool prependDirPath, QString graphName,
 
 	    QString l = line.mid(labelPrefixLoc + 3,
 				 line.length() - (labelPrefixLoc + 3) - 1);
-	    qDeb() << "    subs line, " << labelPrefixLoc + 3
-		   << ", " << line.length() - (labelPrefixLoc + 3) - 1
-		   << ") = |" << l << "|";
+	    qDeb() << "    subs line, "
+		   << labelPrefixLoc + 3 << ", "
+		   << line.length() - (labelPrefixLoc + 3) - 1
+		   << ") = |"
+		   << l
+		   << "|";
 	    edge->setEdgeLabel(l);
 
 	    edge->setParentItem(graph);
@@ -1393,9 +1469,12 @@ File_IO::inputCustomGraph(bool prependDirPath, QString graphName,
     qDebu("    Y: [%.4f, %.4f], Yr min %.4f, max %.4f",
 	  minY, maxY, minYr, maxYr);
     qDebu("    width %.4f, height %.4f", width, height);
-    qDeb() << "    minX = " << minX << ", maxX = "
-	   << maxX << "\n\tminY = " << minY << ", maxY = " << maxY
-	   << "; width = " << width << " and height = " << height;
+    qDeb() << "    minX = " << minX
+	   << ", maxX = " << maxX
+	   << "\n\tminY = " << minY
+	   << ", maxY = " << maxY
+	   << "; width = " << width
+	   << " and height = " << height;
     for (int i = 0; i < nodes.count(); i++)
     {
 	Node * n = nodes.at(i);
@@ -1425,7 +1504,8 @@ File_IO::inputCustomGraph(bool prependDirPath, QString graphName,
     // Apparently we have to center the graph in the viewport.
     // (Presumably this is because the node positions are relative to
     // their parent, the graph?)
-    qDeb() << "    graph current position is " << graph->x() << ", "
+    qDeb() << "    graph current position is "
+	   << graph->x() << ", "
 	   << graph->y();
     // I'd like to use something like
     // graph->setPos(mapToScene(viewport()->rect().center()));
@@ -1437,7 +1517,8 @@ File_IO::inputCustomGraph(bool prependDirPath, QString graphName,
     // But 100 and 30 are this->width and this->height, and it is not
     // clear to me how those numbers get set.
     graph->setPos(49, 15);
-    qDeb() << "    graph CENTERED position is " << graph->x() << ", "
+    qDeb() << "    graph CENTERED position is "
+	   << graph->x() << ", "
 	   << graph->y();
     graph->setRotation(-1 * ui->graphRotation->value(), false);
 
@@ -1860,7 +1941,8 @@ File_IO::setFileDirectory(QWidget * parent)
 void
 File_IO::inputCustomGraphOriginal(QString graphFileName, Ui::MainWindow * ui)
 {
-    qDeb() << "FI::inputCustomGraphOriginal(" << graphFileName
+    qDeb() << "FI::inputCustomGraphOriginal("
+	   << graphFileName
 	   << ") called";
 
     QFile file(graphFileName);
@@ -2072,9 +2154,12 @@ File_IO::inputCustomGraphOriginal(QString graphFileName, Ui::MainWindow * ui)
     qDebu("    Y: [%.4f, %.4f], Yr min %.4f, max %.4f",
 	  minY, maxY, minYr, maxYr);
     qDebu("    width %.4f, height %.4f", width, height);
-    qDeb() << "    minX = " << minX << ", maxX = "
-	   << maxX << "\n\tminY = " << minY << ", maxY = " << maxY
-	   << "; width = " << width << " and height = " << height;
+    qDeb() << "    minX = " << minX
+	   << ", maxX = " << maxX
+	   << "\n\tminY = " << minY
+	   << ", maxY = " << maxY
+	   << "; width = " << width
+	   << " and height = " << height;
     for (int i = 0; i < nodes.count(); i++)
     {
 	Node * n = nodes.at(i);
@@ -2105,7 +2190,8 @@ File_IO::inputCustomGraphOriginal(QString graphFileName, Ui::MainWindow * ui)
     // Apparently we have to center the graph in the viewport.
     // (Presumably this is because the node positions are relative to
     // their parent, the graph?)
-    qDeb() << "    graph current position is " << graph->x() << ", "
+    qDeb() << "    graph current position is "
+	   << graph->x() << ", "
 	   << graph->y();
     // I'd like to use something like
     // graph->setPos(mapToScene(viewport()->rect().center()));
@@ -2118,7 +2204,8 @@ File_IO::inputCustomGraphOriginal(QString graphFileName, Ui::MainWindow * ui)
     // clear to me how those numbers get set.
 
     graph->setPos(49, 15);
-    qDeb() << "    graph CENTERED position is " << graph->x() << ", "
+    qDeb() << "    graph CENTERED position is "
+	   << graph->x() << ", "
 	   << graph->y();
     graph->setRotation(-1 * ui->graphRotation->value(), false);
 
